@@ -32,6 +32,14 @@ type Fund struct {
 	IndexName string `json:"index_name"`
 	// 购买费率
 	Rate string `json:"rate"`
+	// 单位净值
+	UnitNav float64 `json:"unit_nav"`
+	// 累计净值
+	AccumulatedNav float64 `json:"accumulated_nav"`
+	// 日涨跌幅
+	DailyProfitRatio float64 `json:"daily_profit_ratio"`
+	// 净值日期
+	NavDate string `json:"nav_date"`
 	// 定投状态
 	FixedInvestmentStatus string `json:"fixed_investment_status"`
 	// 波动率
@@ -342,13 +350,17 @@ func NewFund(ctx context.Context, efund *eastmoney.RespFundInfo) *Fund {
 	}
 
 	fund := Fund{
-		Code:            efund.Jjxq.Datas.Fcode,
-		Name:            efund.Jjxq.Datas.Shortname,
-		Type:            efund.Jjxq.Datas.Ftype,
-		EstablishedDate: efund.Jjxq.Datas.Estabdate,
-		IndexCode:       efund.Jjxq.Datas.Indexcode,
-		IndexName:       efund.Jjxq.Datas.Indexname,
-		Rate:            efund.Jjxq.Datas.Rate,
+		Code:             efund.Jjxq.Datas.Fcode,
+		Name:             efund.Jjxq.Datas.Shortname,
+		Type:             efund.Jjxq.Datas.Ftype,
+		EstablishedDate:  efund.Jjxq.Datas.Estabdate,
+		IndexCode:        efund.Jjxq.Datas.Indexcode,
+		IndexName:        efund.Jjxq.Datas.Indexname,
+		Rate:             efund.Jjxq.Datas.Rate,
+		UnitNav:          interfaceToFloat64(ctx, efund.Jjxq.Datas.Dwjz),
+		AccumulatedNav:   interfaceToFloat64(ctx, efund.Jjxq.Datas.Ljjz),
+		DailyProfitRatio: interfaceToFloat64(ctx, efund.Jjxq.Datas.Rzdf),
+		NavDate:          efund.Jjxq.Datas.Currentdaymark,
 		Stddev: fundStddev{
 			Year1:  stddev1,
 			Year3:  stddev3,

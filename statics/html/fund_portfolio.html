@@ -1,0 +1,187 @@
+{{ template "header" . }}
+<div id="fund_portfolio_content" class="section">
+    <h2 class="center">我的基金</h2>
+    <p class="center">保存已持有或意向观察基金，并基于当前数据生成质量评分和操作提示。以下内容仅用于投资辅助，不构成投资建议。</p>
+
+    {{ if .Message }}
+    <div class="row">
+        <div class="chip green lighten-4 col s12 center-align">
+            {{ .Message }}
+            <i class="close material-icons">close</i>
+        </div>
+    </div>
+    {{ end }}
+
+    <div class="section">
+        <h4>添加或更新基金</h4>
+        <form action="{{ .FundPortfolioURL }}/save" method="POST">
+            <div class="row">
+                <div class="input-field col s12 m6 l3">
+                    <input id="portfolio_code" name="code" type="text" class="validate" maxlength="6" required>
+                    <label for="portfolio_code">基金代码</label>
+                </div>
+                <div class="input-field col s12 m6 l3">
+                    <select id="portfolio_status" name="status">
+                        <option value="owned">已持有</option>
+                        <option value="watch">意向观察</option>
+                    </select>
+                    <label for="portfolio_status">状态</label>
+                </div>
+                <div class="input-field col s12 m6 l3">
+                    <input id="portfolio_cost_nav" name="cost_nav" type="number" step="0.0001" min="0">
+                    <label for="portfolio_cost_nav">成本净值</label>
+                </div>
+                <div class="input-field col s12 m6 l3">
+                    <input id="portfolio_holding_shares" name="holding_shares" type="number" step="0.01" min="0">
+                    <label for="portfolio_holding_shares">持有份额</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="input-field col s12 m6 l3">
+                    <input id="portfolio_holding_amount" name="holding_amount" type="number" step="0.01" min="0">
+                    <label for="portfolio_holding_amount">投入金额</label>
+                </div>
+                <div class="input-field col s12 m6 l3">
+                    <input id="portfolio_target_weight" name="target_weight" type="number" step="0.1" min="0">
+                    <label for="portfolio_target_weight">目标仓位(%)</label>
+                </div>
+                <div class="input-field col s12 m12 l6">
+                    <input id="portfolio_note" name="note" type="text">
+                    <label for="portfolio_note">备注</label>
+                </div>
+            </div>
+            <button type="submit" class="btn waves-effect waves-light red lighten-2">
+                <i class="material-icons left">save</i>保存
+            </button>
+            <a href="{{ .HostURL }}/fund" class="btn-flat waves-effect">
+                <i class="material-icons left">arrow_back</i>返回基金页
+            </a>
+        </form>
+        <p class="grey-text">本地数据文件：{{ .PortfolioFile }}</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+        <h4>已持有</h4>
+        {{ if eq (len .OwnedAdvices) 0 }}
+        <p class="grey-text">暂无已持有基金。</p>
+        {{ else }}
+        <table class="striped responsive-table">
+            <thead>
+                <tr>
+                    <th>基金</th>
+                    <th>持仓</th>
+                    <th>当前数据</th>
+                    <th>评分</th>
+                    <th>操作提示</th>
+                    <th>依据</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .OwnedAdvices }}
+                <tr>
+                    <td>
+                        <strong>{{ .Item.Code }}</strong>
+                        {{ if .Fund }}<br>{{ .Fund.Name }}<br><span class="grey-text">{{ .Fund.Type }}</span>{{ end }}
+                    </td>
+                    <td>
+                        成本净值：{{ printf "%.4f" .Item.CostNav }}<br>
+                        持有份额：{{ printf "%.2f" .Item.HoldingShares }}<br>
+                        目标仓位：{{ printf "%.1f" .Item.TargetWeight }}%
+                    </td>
+                    <td>
+                        {{ if .Fund }}
+                        当前净值：{{ printf "%.4f" .Fund.UnitNav }}<br>
+                        日涨跌幅：{{ printf "%.2f" .Fund.DailyProfitRatio }}%<br>
+                        持仓收益：{{ .ProfitRatioText }}<br>
+                        浮动盈亏：{{ .ProfitAmountText }}
+                        {{ else }}--{{ end }}
+                    </td>
+                    <td>
+                        <span class="badge {{ .ScoreBadgeClass }} white-text">{{ .Score }} {{ .Grade }}</span><br>
+                        风险：{{ .RiskLevel }}
+                    </td>
+                    <td><span class="badge {{ .ActionBadgeClass }} white-text">{{ .Action }}</span></td>
+                    <td>
+                        {{ range .Reasons }}<div>{{ . }}</div>{{ end }}
+                        {{ range .Warnings }}<div class="orange-text text-darken-2">{{ . }}</div>{{ end }}
+                        {{ if .Item.Note }}<div class="grey-text">备注：{{ .Item.Note }}</div>{{ end }}
+                    </td>
+                    <td>
+                        <form action="{{ $.FundPortfolioURL }}/delete" method="POST">
+                            <input type="hidden" name="code" value="{{ .Item.Code }}">
+                            <button type="submit" class="btn-flat red-text waves-effect">
+                                <i class="material-icons left">delete</i>删除
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+        {{ end }}
+    </div>
+
+    <div class="section">
+        <h4>意向观察</h4>
+        {{ if eq (len .WatchAdvices) 0 }}
+        <p class="grey-text">暂无意向观察基金。</p>
+        {{ else }}
+        <table class="striped responsive-table">
+            <thead>
+                <tr>
+                    <th>基金</th>
+                    <th>观察信息</th>
+                    <th>当前数据</th>
+                    <th>评分</th>
+                    <th>操作提示</th>
+                    <th>依据</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .WatchAdvices }}
+                <tr>
+                    <td>
+                        <strong>{{ .Item.Code }}</strong>
+                        {{ if .Fund }}<br>{{ .Fund.Name }}<br><span class="grey-text">{{ .Fund.Type }}</span>{{ end }}
+                    </td>
+                    <td>
+                        目标仓位：{{ printf "%.1f" .Item.TargetWeight }}%<br>
+                        添加时间：{{ .Item.CreatedAt }}
+                    </td>
+                    <td>
+                        {{ if .Fund }}
+                        当前净值：{{ printf "%.4f" .Fund.UnitNav }}<br>
+                        日涨跌幅：{{ printf "%.2f" .Fund.DailyProfitRatio }}%<br>
+                        净值日期：{{ .Fund.NavDate }}
+                        {{ else }}--{{ end }}
+                    </td>
+                    <td>
+                        <span class="badge {{ .ScoreBadgeClass }} white-text">{{ .Score }} {{ .Grade }}</span><br>
+                        风险：{{ .RiskLevel }}
+                    </td>
+                    <td><span class="badge {{ .ActionBadgeClass }} white-text">{{ .Action }}</span></td>
+                    <td>
+                        {{ range .Reasons }}<div>{{ . }}</div>{{ end }}
+                        {{ range .Warnings }}<div class="orange-text text-darken-2">{{ . }}</div>{{ end }}
+                        {{ if .Item.Note }}<div class="grey-text">备注：{{ .Item.Note }}</div>{{ end }}
+                    </td>
+                    <td>
+                        <form action="{{ $.FundPortfolioURL }}/delete" method="POST">
+                            <input type="hidden" name="code" value="{{ .Item.Code }}">
+                            <button type="submit" class="btn-flat red-text waves-effect">
+                                <i class="material-icons left">delete</i>删除
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+        {{ end }}
+    </div>
+</div>
+{{ template "footer" . }}
