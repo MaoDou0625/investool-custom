@@ -289,10 +289,13 @@ func (e EastMoney) QueryCompanyProfile(ctx context.Context, secuCode string) (Co
 		// zap.Any("resp", resp),
 	)
 	if err != nil {
-		return profile, err
+		logging.Warnf(ctx, "EastMoney QueryCompanyProfile h5 basic failed:%v", err)
+		return e.queryCompanyProfileFromPC(ctx, secuCode)
 	}
 	if resp.Status != 0 {
-		return profile, fmt.Errorf("%s %#v", secuCode, resp.Message)
+		err = fmt.Errorf("%s %#v", secuCode, resp.Message)
+		logging.Warnf(ctx, "EastMoney QueryCompanyProfile h5 basic failed:%v", err)
+		return e.queryCompanyProfileFromPC(ctx, secuCode)
 	}
 	profile.Secucode = resp.Result.Jibenziliao.Secucode
 	profile.Name = resp.Result.Jibenziliao.Companyname
@@ -322,10 +325,13 @@ func (e EastMoney) QueryCompanyProfile(ctx context.Context, secuCode string) (Co
 		// zap.Any("resp", resp1),
 	)
 	if err != nil {
-		return profile, err
+		logging.Warnf(ctx, "EastMoney QueryCompanyProfile h5 extra failed:%v", err)
+		return e.queryCompanyProfileFromPC(ctx, secuCode)
 	}
 	if resp1.Status != 0 {
-		return profile, fmt.Errorf("%s %#v", secuCode, resp1.Message)
+		err = fmt.Errorf("%s %#v", secuCode, resp1.Message)
+		logging.Warnf(ctx, "EastMoney QueryCompanyProfile h5 extra failed:%v", err)
+		return e.queryCompanyProfileFromPC(ctx, secuCode)
 	}
 	for _, i := range resp1.Result.Ticaixiangqinglist {
 		profile.Keywords = append(profile.Keywords, i.Keyword)
@@ -339,6 +345,11 @@ func (e EastMoney) QueryCompanyProfile(ctx context.Context, secuCode string) (Co
 			MainIncomeRatioChart: i.Mainincomeratiochart,
 		}
 		profile.MainForms = append(profile.MainForms, m)
+	}
+	if len(profile.Keywords) == 0 || len(profile.MainForms) == 0 {
+		if pcProfile, err := e.queryCompanyProfileFromPC(ctx, secuCode); err == nil {
+			profile = mergeCompanyProfileFallback(profile, pcProfile)
+		}
 	}
 	return profile, nil
 }

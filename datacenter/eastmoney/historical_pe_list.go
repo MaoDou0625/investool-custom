@@ -1,11 +1,10 @@
-// 获取历史市盈率
-
 package eastmoney
 
 import (
 	"context"
 	"errors"
-	"strconv"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/axiaoxin-com/goutils"
@@ -13,37 +12,25 @@ import (
 	"go.uber.org/zap"
 )
 
-// RespHistoricalPE 历史市盈率接口返回结构
 type RespHistoricalPE struct {
-	Data [][]struct {
-		Securitycode string `json:"SECURITYCODE"`
-		Datetype     string `json:"DATETYPE"`
-		Sl           string `json:"SL"`
-		Endate       string `json:"ENDATE"`
-		Value        string `json:"VALUE"`
-	} `json:"data"`
-	Pe [][]struct {
-		Securitycode string `json:"SECURITYCODE"`
-		Pe30         string `json:"PE30"`
-		Pe50         string `json:"PE50"`
-		Pe70         string `json:"PE70"`
-		Total        string `json:"TOTAL"`
-		Rn1          string `json:"RN1"`
-		Rn2          string `json:"RN2"`
-		Rn3          string `json:"RN3"`
-	} `json:"pe"`
+	Result struct {
+		Data []struct {
+			TradeDate string   `json:"TRADE_DATE"`
+			PETTM     *float64 `json:"PE_TTM"`
+		} `json:"data"`
+	} `json:"result"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Code    int    `json:"code"`
 }
 
-// HistoricalPE 历史 pe
 type HistoricalPE struct {
 	Value float64
 	Date  string
 }
 
-// HistoricalPEList 历史 pe 列表
 type HistoricalPEList []HistoricalPE
 
-// GetMidValue 获取历史 pe 中位数
 func (h HistoricalPEList) GetMidValue(ctx context.Context) (float64, error) {
 	values := []float64{}
 	for _, i := range h {
@@ -52,13 +39,19 @@ func (h HistoricalPEList) GetMidValue(ctx context.Context) (float64, error) {
 	return goutils.MidValueFloat64(values)
 }
 
-// QueryHistoricalPEList 获取历史市盈率
 func (e EastMoney) QueryHistoricalPEList(ctx context.Context, secuCode string) (HistoricalPEList, error) {
-	apiurl := "https://emfront.eastmoney.com/APP_HSF10/CPBD/GZFX"
+	apiurl := "https://datacenter-web.eastmoney.com/api/data/v1/get"
 	params := map[string]string{
-		"code": e.GetFC(secuCode),
-		"year": "4", // 10 年
-		"type": "1", // 市盈率
+		"reportName":   "RPT_VALUEANALYSIS_DET",
+		"columns":      "ALL",
+		"quoteColumns": "",
+		"pageNumber":   "1",
+		"pageSize":     "5000",
+		"sortColumns":  "TRADE_DATE",
+		"sortTypes":    "1",
+		"source":       "WEB",
+		"client":       "WEB",
+		"filter":       fmt.Sprintf(`(SECURITY_CODE="%s")`, normalizeSecurityCode(secuCode)),
 	}
 	logging.Debug(ctx, "EastMoney QueryHistoricalPEList "+apiurl+" begin", zap.Any("params", params))
 	beginTime := time.Now()
@@ -73,26 +66,33 @@ func (e EastMoney) QueryHistoricalPEList(ctx context.Context, secuCode string) (
 		ctx,
 		"EastMoney QueryHistoricalPEList "+apiurl+" end",
 		zap.Int64("latency(ms)", latency),
-		// zap.Any("resp", resp),
 	)
 	if err != nil {
 		return nil, err
 	}
-	result := HistoricalPEList{}
-	if len(resp.Data) == 0 {
+	return parseHistoricalPEResponse(resp)
+}
+
+func parseHistoricalPEResponse(resp RespHistoricalPE) (HistoricalPEList, error) {
+	if !resp.Success {
+		return nil, fmt.Errorf("historical pe request failed:%d %s", resp.Code, resp.Message)
+	}
+	if len(resp.Result.Data) == 0 {
 		return nil, errors.New("no historical pe data")
 	}
-	for _, i := range resp.Data[0] {
-		value, err := strconv.ParseFloat(i.Value, 64)
-		if err != nil {
-			logging.Error(ctx, "QueryHistoricalPEList ParseFloat error:"+err.Error())
+
+	result := HistoricalPEList{}
+	for _, i := range resp.Result.Data {
+		if i.PETTM == nil {
 			continue
 		}
-		pe := HistoricalPE{
-			Date:  i.Endate,
-			Value: value,
-		}
-		result = append(result, pe)
+		result = append(result, HistoricalPE{
+			Date:  strings.Split(i.TradeDate, " ")[0],
+			Value: *i.PETTM,
+		})
+	}
+	if len(result) == 0 {
+		return nil, errors.New("no historical pe data")
 	}
 	return result, nil
 }
