@@ -44,6 +44,41 @@ $(document).ready(function () {
     return result;
   };
 
+  var ratio_text = function (n) {
+    if (n === undefined || n === null || isNaN(Number(n))) {
+      return "--";
+    }
+    return Number(n).toFixed(2) + "%";
+  };
+
+  var fund_holder_structure_row = function (holderStructure) {
+    if (!holderStructure || !holderStructure.latest) {
+      return "<tr><td>机构持有比例</td><td>暂无持有人结构数据</td><td>--</td></tr>";
+    }
+    var latest = holderStructure.latest;
+    var totalShare = "--";
+    if (
+      latest.total_share !== undefined &&
+      latest.total_share !== null &&
+      !isNaN(Number(latest.total_share))
+    ) {
+      totalShare = Number(latest.total_share).toFixed(2) + "亿份";
+    }
+    return (
+      "<tr><td>机构持有比例</td><td>公告日期:" +
+      latest.announcement_date +
+      "<br/>机构:" +
+      ratio_text(latest.institutional_holding_ratio) +
+      "<br/>个人:" +
+      ratio_text(latest.personal_holding_ratio) +
+      "<br/>内部:" +
+      ratio_text(latest.internal_holding_ratio) +
+      "<br/>总份额:" +
+      totalShare +
+      "</td><td>--</td></tr>"
+    );
+  };
+
   // 基本面选股请求处理
   $("#selector_submit_btn").click(function () {
     $(this).addClass("disabled");
@@ -732,7 +767,11 @@ $(document).ready(function () {
               fund.max_retracement.year_5.toFixed(2) +
               "%</td><td>" +
               maxretr_avg135 +
-              "</td></tr></tbody></table>" +
+              "</td></tr>" +
+              fund_holder_structure_row(
+                data.HolderStructures ? data.HolderStructures[fund.code] : null
+              ) +
+              "</tbody></table>" +
               "</div>"
           );
           if (data.StockCheckResults) {

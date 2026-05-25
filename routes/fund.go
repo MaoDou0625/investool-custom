@@ -223,20 +223,7 @@ func FundCheck(c *gin.Context) {
 		return
 	}
 
-	if !p.CheckStocks {
-		data := gin.H{
-			"Env":       viper.GetString("env"),
-			"HostURL":   viper.GetString("server.host_url"),
-			"Version":   version.Version,
-			"PageTitle": "InvesTool | 基金 | 基金检测",
-			"Funds":     funds,
-			"Param":     p,
-		}
-		c.JSON(http.StatusOK, data)
-		return
-	}
-
-	if len(funds) > 50 {
+	if p.CheckStocks && len(funds) > 50 {
 		data := gin.H{
 			"Env":       viper.GetString("env"),
 			"HostURL":   viper.GetString("server.host_url"),
@@ -245,6 +232,22 @@ func FundCheck(c *gin.Context) {
 			"Error":     "基金数量超过限制",
 			"Funds":     funds,
 			"Param":     p,
+		}
+		c.JSON(http.StatusOK, data)
+		return
+	}
+
+	holderStructures := queryFundHolderStructures(c, funds)
+
+	if !p.CheckStocks {
+		data := gin.H{
+			"Env":              viper.GetString("env"),
+			"HostURL":          viper.GetString("server.host_url"),
+			"Version":          version.Version,
+			"PageTitle":        "InvesTool | 基金 | 基金检测",
+			"Funds":            funds,
+			"HolderStructures": holderStructures,
+			"Param":            p,
 		}
 		c.JSON(http.StatusOK, data)
 		return
@@ -276,6 +279,7 @@ func FundCheck(c *gin.Context) {
 		"Version":           version.Version,
 		"PageTitle":         "InvesTool | 基金 | 基金检测",
 		"Funds":             funds,
+		"HolderStructures":  holderStructures,
 		"StockCheckResults": stockCheckResults,
 		"Param":             p,
 	}
