@@ -25,6 +25,7 @@ type fundPortfolioViewData struct {
 	OwnedAdvices     []core.FundPortfolioAdvice
 	WatchAdvices     []core.FundPortfolioAdvice
 	AllAdvices       []core.FundPortfolioAdvice
+	ScreenshotDraft  *core.FundPortfolioScreenshotDraft
 	PortfolioFile    string
 	FundPortfolioURL string
 }
@@ -34,7 +35,7 @@ type fundPortfolioDeleteParam struct {
 }
 
 func FundPortfolioPage(c *gin.Context) {
-	renderFundPortfolioPage(c, c.Query("message"), c.Query("error"))
+	renderFundPortfolioPage(c, c.Query("message"), c.Query("error"), nil)
 }
 
 func FundPortfolioSave(c *gin.Context) {
@@ -64,7 +65,7 @@ func FundPortfolioDelete(c *gin.Context) {
 	redirectFundPortfolio(c, "基金已删除", "")
 }
 
-func renderFundPortfolioPage(c *gin.Context, message string, pageErr string) {
+func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, screenshotDraft *core.FundPortfolioScreenshotDraft) {
 	store := newFundPortfolioStore()
 	portfolio, err := store.Load()
 	if err != nil && pageErr == "" {
@@ -100,6 +101,7 @@ func renderFundPortfolioPage(c *gin.Context, message string, pageErr string) {
 		OwnedAdvices:     ownedAdvices,
 		WatchAdvices:     watchAdvices,
 		AllAdvices:       allAdvices,
+		ScreenshotDraft:  screenshotDraft,
 		PortfolioFile:    fundPortfolioFilename(),
 		FundPortfolioURL: viper.GetString("server.host_url") + "/fund/portfolio",
 	}

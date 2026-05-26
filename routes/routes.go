@@ -14,6 +14,7 @@ func Routes(app *gin.Engine) {
 	app.GET("/fund/filter", FundFilter)
 	app.POST("/fund/check", FundCheck)
 	app.GET("/fund/portfolio", FundPortfolioPage)
+	app.POST("/fund/portfolio/recognize", FundPortfolioRecognizeScreenshot)
 	app.POST("/fund/portfolio/save", FundPortfolioSave)
 	app.POST("/fund/portfolio/delete", FundPortfolioDelete)
 	app.GET("/about", About)
