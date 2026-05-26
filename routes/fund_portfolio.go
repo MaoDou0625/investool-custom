@@ -95,6 +95,8 @@ func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, scr
 	ownedAdvices, watchAdvices := splitFundPortfolioAdvices(allAdvices)
 	portfolioHistory, historyWarnings := loadAndUpdateFundPortfolioHistory(allAdvices)
 	exposureReport.Warnings = append(exposureReport.Warnings, historyWarnings...)
+	correlationSources, correlationWarnings := loadFundPortfolioCorrelationSources(c.Request.Context(), allAdvices)
+	exposureReport.Warnings = append(exposureReport.Warnings, correlationWarnings...)
 
 	data := fundPortfolioViewData{
 		Env:               viper.GetString("env"),
@@ -108,7 +110,7 @@ func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, scr
 		WatchAdvices:      watchAdvices,
 		AllAdvices:        allAdvices,
 		ExposureReport:    exposureReport,
-		ExposureChartData: buildFundPortfolioChartDataJSON(exposureReport, allAdvices, portfolioHistory),
+		ExposureChartData: buildFundPortfolioChartDataJSON(exposureReport, allAdvices, portfolioHistory, correlationSources),
 		ScreenshotDraft:   screenshotDraft,
 		PortfolioFile:     fundPortfolioFilename(),
 		FundPortfolioURL:  viper.GetString("server.host_url") + "/fund/portfolio",

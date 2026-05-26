@@ -446,7 +446,7 @@
     var labels = correlation.labels || [];
     var points = correlation.points || [];
     if (labels.length < 2 || points.length === 0) {
-      renderEmpty("fund-correlation-heatmap-chart", "历史快照不足，至少需要多日数据后计算相关性");
+      renderEmpty("fund-correlation-heatmap-chart", "近期基金净值数据不足，暂无法计算相关性");
       return;
     }
 

@@ -65,8 +65,12 @@ func TestBuildFundPortfolioChartDataJSON(t *testing.T) {
 			}),
 		},
 	}
+	correlationSources := []fundPortfolioCorrelationSource{
+		buildChartCorrelationSource("002207", "鍓嶆捣寮€婧愰噾閾剁彔瀹濇贩鍚圕", []float64{1.00, 1.02, 1.01, 1.05, 1.07, 1.04, 1.08, 1.10, 1.12}),
+		buildChartCorrelationSource("000001", "鍊欓€夐粍閲慐TF鑱旀帴", []float64{1.00, 1.01, 1.03, 1.06, 1.05, 1.08, 1.11, 1.10, 1.14}),
+	}
 
-	raw := []byte(buildFundPortfolioChartDataJSON(report, advices, history))
+	raw := []byte(buildFundPortfolioChartDataJSON(report, advices, history, correlationSources))
 	payload := fundPortfolioChartData{}
 	require.NoError(t, json.Unmarshal(raw, &payload))
 
@@ -137,5 +141,31 @@ func buildChartSnapshot(date string, amount float64, cost float64, items []model
 		ProfitAmount:       profit,
 		ProfitRatio:        profitRatio,
 		Items:              items,
+	}
+}
+
+func buildChartCorrelationSource(code string, name string, unitNAVs []float64) fundPortfolioCorrelationSource {
+	dates := []string{
+		"2026-05-14",
+		"2026-05-15",
+		"2026-05-18",
+		"2026-05-19",
+		"2026-05-20",
+		"2026-05-21",
+		"2026-05-22",
+		"2026-05-25",
+		"2026-05-26",
+	}
+	history := make(eastmoney.FundNAVHistory, 0, len(unitNAVs))
+	for idx, unitNAV := range unitNAVs {
+		history = append(history, eastmoney.FundNAVHistoryPoint{
+			Date:    dates[idx],
+			UnitNAV: unitNAV,
+		})
+	}
+	return fundPortfolioCorrelationSource{
+		Code:    code,
+		Name:    name,
+		History: history,
 	}
 }

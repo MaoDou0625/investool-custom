@@ -103,11 +103,12 @@ func buildFundPortfolioChartDataJSON(
 	report core.FundPortfolioExposureReport,
 	advices []core.FundPortfolioAdvice,
 	history models.FundPortfolioHistory,
+	correlationSources []fundPortfolioCorrelationSource,
 ) template.JS {
 	payload := fundPortfolioChartData{
 		StockConcentration: buildStockConcentration(report.StockExposures),
 		History:            buildHistoryChartPoints(history),
-		Correlation:        buildCorrelationChartData(history),
+		Correlation:        buildCorrelationChartData(correlationSources),
 		ComparisonMetrics: []fundPortfolioComparisonMetricConfig{
 			{Name: "评分", Max: 100},
 			{Name: "预期收益", Max: 100},
