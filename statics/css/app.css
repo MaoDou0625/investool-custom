@@ -232,6 +232,85 @@ main.container:has(#fund_portfolio_content) {
   margin-top: 8px;
 }
 
+.fund-correlation-summary {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin-top: 12px;
+}
+
+.fund-correlation-summary-column {
+  border-top: 1px solid #e0e7ef;
+  padding-top: 10px;
+}
+
+.fund-correlation-summary-column h6 {
+  color: #263238;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.fund-correlation-summary-column p {
+  color: #78909c;
+  font-size: 13px;
+  margin: 8px 0 0;
+}
+
+.fund-correlation-pair-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fund-correlation-pair-list li {
+  align-items: center;
+  border-bottom: 1px solid #eef2f6;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  min-height: 42px;
+}
+
+.fund-correlation-pair-name {
+  color: #37474f;
+  font-size: 13px;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+.fund-correlation-pair-name em {
+  color: #90a4ae;
+  font-style: normal;
+  padding: 0 5px;
+}
+
+.fund-correlation-pair-score {
+  border-radius: 999px;
+  color: #ffffff;
+  flex: 0 0 auto;
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+
+.fund-correlation-pair-score.is-high {
+  background: #dc2626;
+}
+
+.fund-correlation-pair-score.is-medium {
+  background: #d97706;
+}
+
+.fund-correlation-pair-score.is-low {
+  background: #2563eb;
+}
+
+.fund-correlation-pair-score.is-hedge {
+  background: #1e40af;
+}
+
 .fund-correlation-refresh-status .progress {
   margin: 0 0 8px;
 }

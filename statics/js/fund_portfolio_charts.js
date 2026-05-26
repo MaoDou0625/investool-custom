@@ -53,6 +53,18 @@
     return text.slice(0, maxLength - 1) + "...";
   }
 
+  function escapeHTML(value) {
+    return String(value || "").replace(/[&<>"']/g, function (char) {
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[char];
+    });
+  }
+
   function initChart(id) {
     var el = document.getElementById(id);
     if (!el || !window.echarts) {
@@ -446,11 +458,100 @@
     });
   }
 
+  function buildCorrelationPairs(labels, points) {
+    return points.reduce(function (pairs, point) {
+      if (point.x === point.y || point.x > point.y) {
+        return pairs;
+      }
+      var value = Number(point.value || 0);
+      if (!isFinite(value) || !labels[point.x] || !labels[point.y]) {
+        return pairs;
+      }
+      pairs.push({
+        x: point.x,
+        y: point.y,
+        left: labels[point.x],
+        right: labels[point.y],
+        value: value,
+      });
+      return pairs;
+    }, []);
+  }
+
+  function getCorrelationLevel(value) {
+    if (value >= 0.75) {
+      return { label: "高相关", className: "is-high" };
+    }
+    if (value >= 0.45) {
+      return { label: "中等", className: "is-medium" };
+    }
+    if (value >= 0.15) {
+      return { label: "偏低", className: "is-low" };
+    }
+    return { label: "低/负", className: "is-hedge" };
+  }
+
+  function formatCorrelationValue(value) {
+    return Number(value || 0).toFixed(2);
+  }
+
+  function renderCorrelationPairList(title, pairs, emptyText) {
+    if (pairs.length === 0) {
+      return '<div class="fund-correlation-summary-column"><h6>' + escapeHTML(title) + '</h6><p>' + escapeHTML(emptyText) + '</p></div>';
+    }
+    var items = pairs.map(function (pair) {
+      var level = getCorrelationLevel(pair.value);
+      return [
+        "<li>",
+        '<span class="fund-correlation-pair-name">',
+        escapeHTML(pair.left),
+        "<em>/</em>",
+        escapeHTML(pair.right),
+        "</span>",
+        '<span class="fund-correlation-pair-score ' + level.className + '">',
+        formatCorrelationValue(pair.value),
+        " ",
+        escapeHTML(level.label),
+        "</span>",
+        "</li>",
+      ].join("");
+    }).join("");
+    return [
+      '<div class="fund-correlation-summary-column">',
+      "<h6>",
+      escapeHTML(title),
+      "</h6>",
+      '<ul class="fund-correlation-pair-list">',
+      items,
+      "</ul>",
+      "</div>",
+    ].join("");
+  }
+
+  function renderCorrelationSummary(pairs) {
+    var el = document.getElementById("fund-correlation-summary");
+    if (!el) {
+      return;
+    }
+    if (pairs.length === 0) {
+      el.innerHTML = "";
+      return;
+    }
+    var lowPairs = pairs.slice().sort(function (a, b) { return a.value - b.value; }).slice(0, 5);
+    var highPairs = pairs.slice().sort(function (a, b) { return b.value - a.value; }).slice(0, 5);
+    el.innerHTML = [
+      renderCorrelationPairList("低相关组合", lowPairs, "暂无可排序组合"),
+      renderCorrelationPairList("高相关组合", highPairs, "暂无可排序组合"),
+    ].join("");
+  }
+
   function renderCorrelation(data) {
     var correlation = data.correlation || {};
     var labels = correlation.labels || [];
     var points = correlation.points || [];
-    if (labels.length < 2 || points.length === 0) {
+    var pairs = buildCorrelationPairs(labels, points);
+    renderCorrelationSummary(pairs);
+    if (labels.length < 2 || pairs.length === 0) {
       renderEmpty("fund-correlation-heatmap-chart", "近期基金净值数据不足，暂无法计算相关性");
       return;
     }
@@ -464,46 +565,55 @@
       tooltip: {
         position: "top",
         formatter: function (params) {
+          var value = Number(params.value[2] || 0);
+          var level = getCorrelationLevel(value);
           return [
             labels[params.value[1]] + " / " + labels[params.value[0]],
-            "相关性：" + Number(params.value[2] || 0).toFixed(2),
+            "相关性：" + formatCorrelationValue(value) + "（" + level.label + "）",
           ].join("<br>");
         },
       },
-      grid: { top: 26, right: 24, bottom: 74, left: 92, containLabel: true },
+      grid: { top: 30, right: 24, bottom: 86, left: 118, containLabel: true },
       xAxis: {
         type: "category",
         data: labels,
-        axisLabel: { rotate: 35, formatter: function (value) { return trimLabel(value, 10); } },
-        splitArea: { show: true },
+        axisTick: { show: false },
+        axisLine: { show: false },
+        axisLabel: { rotate: 35, formatter: function (value) { return trimLabel(value, 12); } },
       },
       yAxis: {
         type: "category",
         data: labels,
-        axisLabel: { formatter: function (value) { return trimLabel(value, 10); } },
-        splitArea: { show: true },
+        axisTick: { show: false },
+        axisLine: { show: false },
+        axisLabel: { formatter: function (value) { return trimLabel(value, 12); } },
       },
       visualMap: {
-        min: -1,
-        max: 1,
-        calculable: true,
+        type: "piecewise",
         orient: "horizontal",
         left: "center",
-        bottom: 8,
-        inRange: { color: ["#2563eb", "#f5f5f5", "#dc2626"] },
+        bottom: 12,
+        itemWidth: 14,
+        itemHeight: 14,
+        textStyle: { color: "#546e7a" },
+        pieces: [
+          { gte: 0.75, lte: 1, label: "高相关", color: "#dc2626" },
+          { gte: 0.45, lt: 0.75, label: "中等", color: "#f59e0b" },
+          { gte: 0.15, lt: 0.45, label: "偏低", color: "#60a5fa" },
+          { gte: -1, lt: 0.15, label: "低/负", color: "#1d4ed8" },
+        ],
       },
       series: [
         {
           name: "相关性",
           type: "heatmap",
-          data: points.map(function (point) {
-            return [point.x, point.y, Number(point.value || 0).toFixed(4)];
+          data: pairs.map(function (pair) {
+            return [pair.x, pair.y, Number(Number(pair.value || 0).toFixed(4))];
           }),
-          label: {
-            show: true,
-            formatter: function (params) {
-              return Number(params.value[2] || 0).toFixed(2);
-            },
+          label: { show: false },
+          itemStyle: {
+            borderColor: "#ffffff",
+            borderWidth: 2,
           },
           emphasis: {
             itemStyle: {
