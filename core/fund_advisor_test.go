@@ -28,7 +28,7 @@ func TestEvaluateFundPortfolioItemOwnedStrongFund(t *testing.T) {
 	advice := EvaluateFundPortfolioItem(ctx, item, fund, holderStructure)
 
 	require.GreaterOrEqual(t, advice.Score, 80)
-	require.Equal(t, "继续持有，可按目标仓位定投", advice.Action)
+	require.Equal(t, "继续持有，可按预期仓位定投", advice.Action)
 	require.InDelta(t, 11.11, advice.ProfitRatio, 0.01)
 	require.InDelta(t, 200, advice.ProfitAmount, 0.01)
 	require.True(t, advice.HasPosition)

@@ -345,7 +345,7 @@ func actionForScore(status string, score int) string {
 	if status == models.FundPortfolioStatusOwned {
 		switch {
 		case score >= 80:
-			return "继续持有，可按目标仓位定投"
+			return "继续持有，可按预期仓位定投"
 		case score >= 65:
 			return "继续持有，控制加仓节奏"
 		case score >= 50:
