@@ -13,7 +13,7 @@ func TestCalculateFundPositionMetricsUsesInputCurrentAmount(t *testing.T) {
 		Status:        models.FundPortfolioStatusOwned,
 		CostNav:       2.5,
 		HoldingShares: 100,
-		HoldingAmount: 275,
+		CurrentAmount: 275,
 	}
 
 	metrics, ok, warnings := CalculateFundPositionMetrics(item, fund)
@@ -51,7 +51,7 @@ func TestCalculateFundPositionMetricsRequiresCostAndShares(t *testing.T) {
 	item := models.FundPortfolioItem{
 		Status:        models.FundPortfolioStatusOwned,
 		CostNav:       2.5,
-		HoldingAmount: 275,
+		CurrentAmount: 275,
 	}
 
 	_, ok, warnings := CalculateFundPositionMetrics(item, fund)

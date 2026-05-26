@@ -37,7 +37,7 @@ func TestEvaluateFundPortfolioItemOwnedStrongFund(t *testing.T) {
 	require.NotEmpty(t, advice.Reasons)
 }
 
-func TestEvaluateFundPortfolioItemUsesHoldingAmountForProfit(t *testing.T) {
+func TestEvaluateFundPortfolioItemUsesCurrentAmountForProfit(t *testing.T) {
 	ctx := context.Background()
 	fund := testAdvisorFund(t)
 	item := models.FundPortfolioItem{
@@ -45,7 +45,7 @@ func TestEvaluateFundPortfolioItemUsesHoldingAmountForProfit(t *testing.T) {
 		Status:        models.FundPortfolioStatusOwned,
 		CostNav:       1.8,
 		HoldingShares: 1000,
-		HoldingAmount: 1900,
+		CurrentAmount: 1900,
 	}
 
 	advice := EvaluateFundPortfolioItem(ctx, item, fund, eastmoney.FundHolderStructureResult{})
@@ -55,6 +55,40 @@ func TestEvaluateFundPortfolioItemUsesHoldingAmountForProfit(t *testing.T) {
 	require.InDelta(t, 1900, advice.CurrentAmount, 0.01)
 	require.InDelta(t, 5.56, advice.ProfitRatio, 0.01)
 	require.InDelta(t, 100, advice.ProfitAmount, 0.01)
+}
+
+func TestEvaluateFundPortfolioAppliesAllocationMetrics(t *testing.T) {
+	ctx := context.Background()
+	fund := testAdvisorFund(t)
+	items := []models.FundPortfolioItem{
+		{
+			Code:          "260104",
+			Status:        models.FundPortfolioStatusOwned,
+			CostNav:       1.8,
+			HoldingShares: 1000,
+			CurrentAmount: 1900,
+		},
+		{
+			Code:          "260105",
+			Status:        models.FundPortfolioStatusOwned,
+			CostNav:       1.8,
+			HoldingShares: 1000,
+			CurrentAmount: 100,
+		},
+	}
+	funds := map[string]*models.Fund{
+		"260104": fund,
+		"260105": fund,
+	}
+
+	advices := EvaluateFundPortfolio(ctx, items, funds, map[string]eastmoney.FundHolderStructureResult{})
+
+	require.Len(t, advices, 2)
+	require.InDelta(t, 95, advices[0].CurrentWeight, 0.01)
+	require.InDelta(t, 5, advices[1].CurrentWeight, 0.01)
+	require.True(t, advices[0].HasExpectedAnnualReturn)
+	require.NotZero(t, advices[0].RecommendedWeight)
+	require.NotZero(t, advices[0].AllocationGap)
 }
 
 func TestEvaluateFundPortfolioItemMissingFund(t *testing.T) {

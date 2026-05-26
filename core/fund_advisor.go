@@ -10,20 +10,25 @@ import (
 )
 
 type FundPortfolioAdvice struct {
-	Item            models.FundPortfolioItem            `json:"item"`
-	Fund            *models.Fund                        `json:"fund,omitempty"`
-	HolderStructure eastmoney.FundHolderStructureResult `json:"holder_structure"`
-	Score           int                                 `json:"score"`
-	Grade           string                              `json:"grade"`
-	Action          string                              `json:"action"`
-	RiskLevel       string                              `json:"risk_level"`
-	HasPosition     bool                                `json:"has_position"`
-	CostAmount      float64                             `json:"cost_amount"`
-	CurrentAmount   float64                             `json:"current_amount"`
-	ProfitRatio     float64                             `json:"profit_ratio"`
-	ProfitAmount    float64                             `json:"profit_amount"`
-	Reasons         []string                            `json:"reasons"`
-	Warnings        []string                            `json:"warnings"`
+	Item                    models.FundPortfolioItem            `json:"item"`
+	Fund                    *models.Fund                        `json:"fund,omitempty"`
+	HolderStructure         eastmoney.FundHolderStructureResult `json:"holder_structure"`
+	Score                   int                                 `json:"score"`
+	Grade                   string                              `json:"grade"`
+	Action                  string                              `json:"action"`
+	RiskLevel               string                              `json:"risk_level"`
+	HasPosition             bool                                `json:"has_position"`
+	CostAmount              float64                             `json:"cost_amount"`
+	CurrentAmount           float64                             `json:"current_amount"`
+	CurrentWeight           float64                             `json:"current_weight"`
+	RecommendedWeight       float64                             `json:"recommended_weight"`
+	AllocationGap           float64                             `json:"allocation_gap"`
+	HasExpectedAnnualReturn bool                                `json:"has_expected_annual_return"`
+	ExpectedAnnualReturn    float64                             `json:"expected_annual_return"`
+	ProfitRatio             float64                             `json:"profit_ratio"`
+	ProfitAmount            float64                             `json:"profit_amount"`
+	Reasons                 []string                            `json:"reasons"`
+	Warnings                []string                            `json:"warnings"`
 }
 
 func EvaluateFundPortfolio(
@@ -33,9 +38,11 @@ func EvaluateFundPortfolio(
 	holderStructures map[string]eastmoney.FundHolderStructureResult,
 ) []FundPortfolioAdvice {
 	results := make([]FundPortfolioAdvice, 0, len(items))
+	totalCurrentAmount := CalculatePortfolioCurrentTotal(items, funds)
 	for _, item := range items {
 		results = append(results, EvaluateFundPortfolioItem(ctx, item, funds[item.Code], holderStructures[item.Code]))
 	}
+	ApplyFundPortfolioAllocationMetrics(results, totalCurrentAmount)
 	return results
 }
 
@@ -74,6 +81,7 @@ func EvaluateFundPortfolioItem(
 	advice.Grade = gradeForScore(advice.Score)
 	advice.RiskLevel = riskLevelForFund(fund)
 	advice.Action = actionForScore(item.Status, advice.Score)
+	advice.ExpectedAnnualReturn, advice.HasExpectedAnnualReturn = EstimateFundAnnualReturn(fund)
 
 	if len(advice.Reasons) == 0 {
 		advice.Reasons = append(advice.Reasons, "可用数据不足，建议先补充观察")
@@ -133,6 +141,41 @@ func (a FundPortfolioAdvice) CurrentAmountText() string {
 		return "--"
 	}
 	return fmt.Sprintf("%.2f", a.CurrentAmount)
+}
+
+func (a FundPortfolioAdvice) CurrentWeightText() string {
+	if !a.HasPosition || a.CurrentWeight == 0 {
+		return "--"
+	}
+	return fmt.Sprintf("%.1f%%", a.CurrentWeight)
+}
+
+func (a FundPortfolioAdvice) RecommendedWeightText() string {
+	if a.RecommendedWeight == 0 {
+		return "--"
+	}
+	return fmt.Sprintf("%.1f%%", a.RecommendedWeight)
+}
+
+func (a FundPortfolioAdvice) AllocationGapText() string {
+	if !a.HasPosition || a.RecommendedWeight == 0 {
+		return "--"
+	}
+	return fmt.Sprintf("%+.1f%%", a.AllocationGap)
+}
+
+func (a FundPortfolioAdvice) TargetWeightText() string {
+	if a.Item.TargetWeight <= 0 {
+		return "--"
+	}
+	return fmt.Sprintf("%.1f%%", a.Item.TargetWeight)
+}
+
+func (a FundPortfolioAdvice) ExpectedAnnualReturnText() string {
+	if !a.HasExpectedAnnualReturn {
+		return "--"
+	}
+	return fmt.Sprintf("%.2f%%", a.ExpectedAnnualReturn)
 }
 
 func (a *FundPortfolioAdvice) evaluateQuality(ctx context.Context, fund *models.Fund) {

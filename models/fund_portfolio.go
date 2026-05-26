@@ -1,6 +1,7 @@
 package models
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -31,8 +32,10 @@ type FundPortfolioItem struct {
 	Status        string  `json:"status" form:"status"`
 	CostNav       float64 `json:"cost_nav" form:"cost_nav"`
 	HoldingShares float64 `json:"holding_shares" form:"holding_shares"`
-	// HoldingAmount is the current holding market value shown by the user's broker/app.
-	HoldingAmount float64 `json:"holding_amount" form:"holding_amount"`
+	// CurrentAmount is the current holding market value shown by the user's broker/app.
+	CurrentAmount float64 `json:"current_amount" form:"current_amount"`
+	// HoldingAmount is a legacy field kept only to read old local portfolio files/forms.
+	HoldingAmount float64 `json:"holding_amount,omitempty" form:"holding_amount"`
 	TargetWeight  float64 `json:"target_weight" form:"target_weight"`
 	Note          string  `json:"note" form:"note"`
 	CreatedAt     string  `json:"created_at"`
@@ -71,14 +74,15 @@ func (i *FundPortfolioItem) Normalize(now time.Time) error {
 	}
 
 	i.Note = strings.TrimSpace(i.Note)
+	i.MigrateLegacyFields()
 	if i.CostNav < 0 {
 		i.CostNav = 0
 	}
 	if i.HoldingShares < 0 {
 		i.HoldingShares = 0
 	}
-	if i.HoldingAmount < 0 {
-		i.HoldingAmount = 0
+	if i.CurrentAmount < 0 {
+		i.CurrentAmount = 0
 	}
 	if i.TargetWeight < 0 {
 		i.TargetWeight = 0
@@ -90,6 +94,13 @@ func (i *FundPortfolioItem) Normalize(now time.Time) error {
 	}
 	i.UpdatedAt = ts
 	return nil
+}
+
+func (i *FundPortfolioItem) MigrateLegacyFields() {
+	if i.CurrentAmount <= 0 && i.HoldingAmount > 0 {
+		i.CurrentAmount = i.HoldingAmount
+	}
+	i.HoldingAmount = 0
 }
 
 func (p FundPortfolio) Codes() []string {
@@ -179,17 +190,23 @@ func (s *FundPortfolioStore) loadUnlocked() (FundPortfolio, error) {
 		return portfolio, fmt.Errorf("fund portfolio filename is empty")
 	}
 
-	f, err := os.Open(s.filename)
+	content, err := os.ReadFile(s.filename)
 	if os.IsNotExist(err) {
 		return portfolio, nil
 	}
 	if err != nil {
 		return portfolio, err
 	}
-	defer f.Close()
 
-	if err := json.NewDecoder(f).Decode(&portfolio); err != nil {
+	content = bytes.TrimPrefix(content, []byte{0xEF, 0xBB, 0xBF})
+	if len(bytes.TrimSpace(content)) == 0 {
+		return portfolio, nil
+	}
+	if err := json.Unmarshal(content, &portfolio); err != nil {
 		return portfolio, err
+	}
+	for idx := range portfolio.Items {
+		portfolio.Items[idx].MigrateLegacyFields()
 	}
 	portfolio.sort()
 	return portfolio, nil
