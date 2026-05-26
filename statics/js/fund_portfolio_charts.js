@@ -2,6 +2,14 @@
   "use strict";
 
   var chartInstances = [];
+  var chartIds = [
+    "fund-theme-exposure-chart",
+    "fund-stock-exposure-chart",
+    "fund-risk-return-chart",
+    "fund-portfolio-history-chart",
+    "fund-correlation-heatmap-chart",
+    "fund-comparison-radar-chart",
+  ];
   var palette = [
     "#2563eb",
     "#059669",
@@ -32,6 +40,10 @@
     return Number(value || 0).toFixed(2);
   }
 
+  function formatMoney(value) {
+    return formatAmount(value) + " 元";
+  }
+
   function trimLabel(value, maxLength) {
     var text = String(value || "");
     if (text.length <= maxLength) {
@@ -50,6 +62,21 @@
     return chart;
   }
 
+  function renderEmpty(id, message) {
+    var chart = initChart(id);
+    if (!chart) {
+      return;
+    }
+    chart.setOption({
+      title: {
+        text: message,
+        left: "center",
+        top: "middle",
+        textStyle: { color: "#78909c", fontSize: 14, fontWeight: 400 },
+      },
+    });
+  }
+
   function showUnavailable(id) {
     var el = document.getElementById(id);
     if (el) {
@@ -57,12 +84,79 @@
     }
   }
 
+  function sumBy(rows, fieldName) {
+    var total = 0;
+    rows.forEach(function (row) {
+      total += Number(row[fieldName] || 0);
+    });
+    return total;
+  }
+
+  function uniqueThemeSources(rows) {
+    var totals = {};
+    rows.forEach(function (row) {
+      if (!row.source) {
+        return;
+      }
+      totals[row.source] = (totals[row.source] || 0) + Number(row.weight || 0);
+    });
+    return Object.keys(totals).sort(function (a, b) {
+      return totals[b] - totals[a];
+    });
+  }
+
   function renderThemeExposure(data) {
+    var themes = (data.themes || []).slice(0, 12);
+    if (themes.length === 0) {
+      renderEmpty("fund-theme-exposure-chart", "暂无主题暴露数据");
+      return;
+    }
+
     var chart = initChart("fund-theme-exposure-chart");
     if (!chart) {
       return;
     }
-    var rows = (data.themes || []).slice(0, 12).reverse();
+    var rows = themes.reverse();
+    var themeByName = {};
+    rows.forEach(function (row) {
+      themeByName[row.name] = row;
+    });
+
+    var sourceRows = (data.themeSources || []).filter(function (row) {
+      return themeByName[row.theme];
+    });
+    var sources = uniqueThemeSources(sourceRows);
+    var series = [];
+    if (sources.length > 0) {
+      series = sources.map(function (source) {
+        return {
+          name: source,
+          type: "bar",
+          stack: "theme-source",
+          barMaxWidth: 24,
+          emphasis: { focus: "series" },
+          data: rows.map(function (theme) {
+            var match = sourceRows.find(function (row) {
+              return row.theme === theme.name && row.source === source;
+            });
+            return match ? Number(match.weight || 0).toFixed(2) : 0;
+          }),
+        };
+      });
+    } else {
+      series = [{
+        name: "组合占比",
+        type: "bar",
+        barMaxWidth: 24,
+        data: rows.map(function (row, index) {
+          return {
+            value: Number(row.weight || 0).toFixed(2),
+            itemStyle: { color: palette[index % palette.length] },
+          };
+        }),
+      }];
+    }
+
     chart.setOption({
       color: palette,
       tooltip: {
@@ -70,15 +164,34 @@
         axisPointer: { type: "shadow" },
         formatter: function (params) {
           var row = rows[params[0].dataIndex];
-          return [
+          var lines = [
             "<strong>" + row.name + "</strong>",
             "组合占比：" + formatPercent(row.weight, 1),
-            "估算金额：" + formatAmount(row.amount),
-            "主要来源：" + row.sources,
-          ].join("<br>");
+            "估算金额：" + formatMoney(row.amount),
+          ];
+          var sourceLines = params.filter(function (item) {
+            return Number(item.value || 0) > 0;
+          }).map(function (item) {
+            return item.seriesName + "：" + formatPercent(item.value, 1);
+          });
+          if (sourceLines.length > 0) {
+            lines.push("来源拆分：");
+            lines = lines.concat(sourceLines);
+          } else if (row.sources) {
+            lines.push("主要来源：" + row.sources);
+          }
+          return lines.join("<br>");
         },
       },
-      grid: { top: 12, right: 48, bottom: 24, left: 112 },
+      legend: {
+        type: "scroll",
+        top: 0,
+        left: 8,
+        right: 8,
+        itemWidth: 10,
+        itemHeight: 10,
+      },
+      grid: { top: sources.length > 0 ? 54 : 16, right: 48, bottom: 24, left: 112, containLabel: true },
       xAxis: {
         type: "value",
         axisLabel: { formatter: "{value}%" },
@@ -91,37 +204,37 @@
           formatter: function (value) { return trimLabel(value, 9); },
         },
       },
-      series: [
-        {
-          name: "组合占比",
-          type: "bar",
-          data: rows.map(function (row, index) {
-            return {
-              value: Number(row.weight || 0).toFixed(2),
-              itemStyle: { color: palette[index % palette.length] },
-            };
-          }),
-          barMaxWidth: 24,
-          label: {
-            show: true,
-            position: "right",
-            formatter: function (params) {
-              return formatPercent(params.value, 1);
-            },
-          },
-        },
-      ],
+      series: series,
     });
   }
 
   function renderStockExposure(data) {
+    var rows = (data.stocks || []).slice(0, 10).reverse();
+    if (rows.length === 0) {
+      renderEmpty("fund-stock-exposure-chart", "暂无穿透后重仓股数据");
+      return;
+    }
+
     var chart = initChart("fund-stock-exposure-chart");
     if (!chart) {
       return;
     }
-    var rows = (data.stocks || []).slice(0, 10).reverse();
+    var concentration = data.stockConcentration || {};
+    var subtitle = "Top10 集中度 " + formatPercent(concentration.top10Weight, 2);
+    if (concentration.largestName) {
+      subtitle += "；第一大 " + concentration.largestName + " " + formatPercent(concentration.largestWeight, 2);
+    }
+
     chart.setOption({
       color: palette,
+      title: {
+        text: "穿透后重仓股",
+        subtext: subtitle,
+        left: 8,
+        top: 0,
+        textStyle: { fontSize: 14, fontWeight: 500 },
+        subtextStyle: { color: "#607d8b" },
+      },
       tooltip: {
         trigger: "axis",
         axisPointer: { type: "shadow" },
@@ -132,12 +245,12 @@
             "主题：" + row.theme,
             "行业：" + row.industry,
             "组合占比：" + formatPercent(row.weight, 2),
-            "估算金额：" + formatAmount(row.amount),
+            "估算金额：" + formatMoney(row.amount),
             "来源：" + row.source,
           ].join("<br>");
         },
       },
-      grid: { top: 12, right: 52, bottom: 24, left: 108 },
+      grid: { top: 64, right: 52, bottom: 24, left: 108, containLabel: true },
       xAxis: {
         type: "value",
         axisLabel: { formatter: "{value}%" },
@@ -173,19 +286,295 @@
     });
   }
 
+  function renderRiskReturn(data) {
+    var rows = (data.riskReturns || []);
+    if (rows.length === 0) {
+      renderEmpty("fund-risk-return-chart", "暂无可用于风险收益散点的数据");
+      return;
+    }
+
+    var chart = initChart("fund-risk-return-chart");
+    if (!chart) {
+      return;
+    }
+    var maxAmount = Math.max(sumBy(rows, "currentAmount"), 1);
+    var scatterData = rows.map(function (row) {
+      return [row.risk, row.expectedReturn, row.currentAmount, row.name, row.code, row.status, row.action, row.score, row.currentWeight, row.returnLabel];
+    });
+
+    chart.setOption({
+      color: ["#2563eb"],
+      tooltip: {
+        trigger: "item",
+        formatter: function (params) {
+          var value = params.value;
+          return [
+            "<strong>" + value[3] + " " + value[4] + "</strong>",
+            "状态：" + value[5] + "；操作：" + value[6],
+            "评分：" + value[7],
+            "风险：" + formatPercent(value[0], 2),
+            String(value[9] || "收益") + "：" + formatPercent(value[1], 2),
+            "当前总值：" + formatMoney(value[2]),
+            "当前仓位：" + formatPercent(value[8], 1),
+          ].join("<br>");
+        },
+      },
+      grid: { top: 28, right: 28, bottom: 46, left: 58, containLabel: true },
+      xAxis: {
+        type: "value",
+        name: "风险/回撤",
+        nameLocation: "middle",
+        nameGap: 28,
+        axisLabel: { formatter: "{value}%" },
+        splitLine: { lineStyle: { color: "#eceff1" } },
+        scale: true,
+      },
+      yAxis: {
+        type: "value",
+        name: "预期或近1年收益",
+        axisLabel: { formatter: "{value}%" },
+        splitLine: { lineStyle: { color: "#eceff1" } },
+        scale: true,
+      },
+      series: [
+        {
+          name: "基金",
+          type: "scatter",
+          data: scatterData,
+          symbolSize: function (value) {
+            var amount = Number(value[2] || 0);
+            return Math.max(10, Math.min(34, 10 + Math.sqrt(amount / maxAmount) * 24));
+          },
+          label: {
+            show: true,
+            position: "right",
+            formatter: function (params) {
+              return trimLabel(params.value[4], 8);
+            },
+          },
+          itemStyle: { opacity: 0.82 },
+        },
+      ],
+    });
+  }
+
+  function renderHistory(data) {
+    var rows = (data.history || []);
+    if (rows.length === 0) {
+      renderEmpty("fund-portfolio-history-chart", "暂无组合历史快照");
+      return;
+    }
+
+    var chart = initChart("fund-portfolio-history-chart");
+    if (!chart) {
+      return;
+    }
+    var subtitle = rows.length < 2 ? "已记录今天快照，多日后会形成曲线" : "";
+    chart.setOption({
+      color: ["#2563eb", "#dc2626"],
+      title: {
+        text: "组合总值与收益率",
+        subtext: subtitle,
+        left: 8,
+        top: 0,
+        textStyle: { fontSize: 14, fontWeight: 500 },
+        subtextStyle: { color: "#607d8b" },
+      },
+      tooltip: {
+        trigger: "axis",
+        formatter: function (params) {
+          var idx = params[0].dataIndex;
+          var row = rows[idx];
+          return [
+            "<strong>" + row.date + "</strong>",
+            "组合总值：" + formatMoney(row.amount),
+            "浮动盈亏：" + formatMoney(row.profit),
+            "收益率：" + formatPercent(row.profitRatio, 2),
+          ].join("<br>");
+        },
+      },
+      legend: { top: 28, left: 8 },
+      grid: { top: 72, right: 56, bottom: 36, left: 62, containLabel: true },
+      xAxis: {
+        type: "category",
+        data: rows.map(function (row) { return row.date; }),
+        boundaryGap: rows.length === 1,
+      },
+      yAxis: [
+        {
+          type: "value",
+          name: "总值",
+          axisLabel: { formatter: "{value}" },
+          splitLine: { lineStyle: { color: "#eceff1" } },
+          scale: true,
+        },
+        {
+          type: "value",
+          name: "收益率",
+          axisLabel: { formatter: "{value}%" },
+          splitLine: { show: false },
+          scale: true,
+        },
+      ],
+      series: [
+        {
+          name: "组合总值",
+          type: "line",
+          smooth: true,
+          yAxisIndex: 0,
+          data: rows.map(function (row) { return Number(row.amount || 0).toFixed(2); }),
+        },
+        {
+          name: "收益率",
+          type: "line",
+          smooth: true,
+          yAxisIndex: 1,
+          data: rows.map(function (row) { return Number(row.profitRatio || 0).toFixed(2); }),
+        },
+      ],
+    });
+  }
+
+  function renderCorrelation(data) {
+    var correlation = data.correlation || {};
+    var labels = correlation.labels || [];
+    var points = correlation.points || [];
+    if (labels.length < 2 || points.length === 0) {
+      renderEmpty("fund-correlation-heatmap-chart", "历史快照不足，至少需要多日数据后计算相关性");
+      return;
+    }
+
+    var chart = initChart("fund-correlation-heatmap-chart");
+    if (!chart) {
+      return;
+    }
+    chart.setOption({
+      tooltip: {
+        position: "top",
+        formatter: function (params) {
+          return [
+            labels[params.value[1]] + " / " + labels[params.value[0]],
+            "相关性：" + Number(params.value[2] || 0).toFixed(2),
+          ].join("<br>");
+        },
+      },
+      grid: { top: 26, right: 24, bottom: 74, left: 92, containLabel: true },
+      xAxis: {
+        type: "category",
+        data: labels,
+        axisLabel: { rotate: 35, formatter: function (value) { return trimLabel(value, 10); } },
+        splitArea: { show: true },
+      },
+      yAxis: {
+        type: "category",
+        data: labels,
+        axisLabel: { formatter: function (value) { return trimLabel(value, 10); } },
+        splitArea: { show: true },
+      },
+      visualMap: {
+        min: -1,
+        max: 1,
+        calculable: true,
+        orient: "horizontal",
+        left: "center",
+        bottom: 8,
+        inRange: { color: ["#2563eb", "#f5f5f5", "#dc2626"] },
+      },
+      series: [
+        {
+          name: "相关性",
+          type: "heatmap",
+          data: points.map(function (point) {
+            return [point.x, point.y, Number(point.value || 0).toFixed(4)];
+          }),
+          label: {
+            show: true,
+            formatter: function (params) {
+              return Number(params.value[2] || 0).toFixed(2);
+            },
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowColor: "rgba(0, 0, 0, 0.18)",
+            },
+          },
+        },
+      ],
+    });
+  }
+
+  function renderComparison(data) {
+    var rows = (data.comparisons || []);
+    var metrics = (data.comparisonMetrics || []);
+    if (rows.length === 0 || metrics.length === 0) {
+      renderEmpty("fund-comparison-radar-chart", "暂无可用于替代基金对比的数据");
+      return;
+    }
+
+    var chart = initChart("fund-comparison-radar-chart");
+    if (!chart) {
+      return;
+    }
+    chart.setOption({
+      color: palette,
+      tooltip: {
+        trigger: "item",
+        formatter: function (params) {
+          var row = rows[params.dataIndex];
+          var lines = ["<strong>" + row.name + "</strong>", "状态：" + row.status];
+          metrics.forEach(function (metric, idx) {
+            lines.push(metric.name + "：" + Number(row.values[idx] || 0).toFixed(1));
+          });
+          return lines.join("<br>");
+        },
+      },
+      legend: {
+        type: "scroll",
+        bottom: 0,
+        left: 8,
+        right: 8,
+      },
+      radar: {
+        center: ["50%", "48%"],
+        radius: "64%",
+        indicator: metrics.map(function (metric) {
+          return { name: metric.name, max: metric.max || 100 };
+        }),
+      },
+      series: [
+        {
+          name: "基金对比",
+          type: "radar",
+          data: rows.map(function (row) {
+            return {
+              name: row.name,
+              value: row.values,
+            };
+          }),
+          areaStyle: { opacity: 0.06 },
+          lineStyle: { width: 2 },
+        },
+      ],
+    });
+  }
+
   onReady(function () {
     var data = window.fundPortfolioChartData;
     if (!data) {
       return;
     }
     if (!window.echarts) {
-      showUnavailable("fund-theme-exposure-chart");
-      showUnavailable("fund-stock-exposure-chart");
+      chartIds.forEach(showUnavailable);
       return;
     }
 
     renderThemeExposure(data);
     renderStockExposure(data);
+    renderRiskReturn(data);
+    renderHistory(data);
+    renderCorrelation(data);
+    renderComparison(data);
     window.addEventListener("resize", function () {
       chartInstances.forEach(function (chart) {
         chart.resize();

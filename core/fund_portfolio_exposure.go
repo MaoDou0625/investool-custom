@@ -20,10 +20,17 @@ type FundPortfolioExposureReport struct {
 }
 
 type FundPortfolioThemeExposure struct {
-	Theme       string
-	Amount      float64
-	Weight      float64
-	SourceFunds string
+	Theme            string
+	Amount           float64
+	Weight           float64
+	SourceFunds      string
+	SourceBreakdowns []FundPortfolioExposureSource
+}
+
+type FundPortfolioExposureSource struct {
+	Name   string
+	Amount float64
+	Weight float64
 }
 
 type FundPortfolioETFLookThrough struct {
@@ -259,10 +266,11 @@ func buildThemeExposureRows(accumulators map[string]*fundPortfolioExposureAccumu
 	rows := make([]FundPortfolioThemeExposure, 0, len(accumulators))
 	for _, acc := range accumulators {
 		rows = append(rows, FundPortfolioThemeExposure{
-			Theme:       acc.theme,
-			Amount:      acc.amount,
-			Weight:      acc.amount / totalAmount * 100,
-			SourceFunds: summarizeExposureSources(acc.sources, totalAmount),
+			Theme:            acc.theme,
+			Amount:           acc.amount,
+			Weight:           acc.amount / totalAmount * 100,
+			SourceFunds:      summarizeExposureSources(acc.sources, totalAmount),
+			SourceBreakdowns: buildExposureSourceBreakdowns(acc.sources, totalAmount),
 		})
 	}
 	sort.Slice(rows, func(i, j int) bool {
@@ -317,18 +325,21 @@ func (e FundPortfolioStockExposure) sourceText() string {
 	return fmt.Sprintf("%s 持仓 %.2f%%", e.SourceFund, e.HoldingRatio)
 }
 
+func buildExposureSourceBreakdowns(sources map[string]float64, totalAmount float64) []FundPortfolioExposureSource {
+	rows := sortExposureSources(sources)
+	result := make([]FundPortfolioExposureSource, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, FundPortfolioExposureSource{
+			Name:   row.label,
+			Amount: row.amount,
+			Weight: row.amount / totalAmount * 100,
+		})
+	}
+	return result
+}
+
 func summarizeExposureSources(sources map[string]float64, totalAmount float64) string {
-	type sourceRow struct {
-		label  string
-		amount float64
-	}
-	rows := make([]sourceRow, 0, len(sources))
-	for label, amount := range sources {
-		rows = append(rows, sourceRow{label: label, amount: amount})
-	}
-	sort.Slice(rows, func(i, j int) bool {
-		return rows[i].amount > rows[j].amount
-	})
+	rows := sortExposureSources(sources)
 	if len(rows) > 3 {
 		rows = rows[:3]
 	}
@@ -337,6 +348,22 @@ func summarizeExposureSources(sources map[string]float64, totalAmount float64) s
 		parts = append(parts, fmt.Sprintf("%s %.1f%%", row.label, row.amount/totalAmount*100))
 	}
 	return strings.Join(parts, "；")
+}
+
+func sortExposureSources(sources map[string]float64) []fundPortfolioExposureSourceRow {
+	rows := make([]fundPortfolioExposureSourceRow, 0, len(sources))
+	for label, amount := range sources {
+		rows = append(rows, fundPortfolioExposureSourceRow{label: label, amount: amount})
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		return rows[i].amount > rows[j].amount
+	})
+	return rows
+}
+
+type fundPortfolioExposureSourceRow struct {
+	label  string
+	amount float64
 }
 
 func fundExposureSourceLabel(code string, targetETFCode string) string {
