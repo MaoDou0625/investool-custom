@@ -548,11 +548,18 @@
         type: "line",
         smooth: true,
         showSymbol: false,
+        symbolSize: 6,
         connectNulls: false,
-        emphasis: { focus: "series" },
+        triggerLineEvent: true,
+        emphasis: { focus: "series", lineStyle: { width: 4 } },
         data: dates.map(function (date) {
           var point = pointByDate[date];
-          return point ? Number(point.returnRatio || 0).toFixed(2) : null;
+          return point ? {
+            value: Number(point.returnRatio || 0).toFixed(2),
+            unitNav: Number(point.unitNav || 0).toFixed(4),
+            date: date,
+            fundName: row.name || row.code,
+          } : null;
         }),
       };
     });
@@ -569,16 +576,16 @@
         subtextStyle: { color: "#607d8b" },
       },
       tooltip: {
-        trigger: "axis",
+        trigger: "item",
+        triggerOn: "mousemove|click",
         formatter: function (params) {
-          var lines = ["<strong>" + params[0].axisValue + "</strong>"];
-          params.forEach(function (item) {
-            if (item.value == null || item.value === "") {
-              return;
-            }
-            lines.push(item.marker + item.seriesName + "：" + formatPercent(item.value, 2));
-          });
-          return lines.join("<br>");
+          var point = params.data || {};
+          return [
+            "<strong>" + (point.fundName || params.seriesName) + "</strong>",
+            "日期：" + (point.date || params.name || ""),
+            "累计涨跌幅：" + formatPercent(point.value, 2),
+            "单位净值：" + (point.unitNav || "--"),
+          ].join("<br>");
         },
       },
       legend: {
