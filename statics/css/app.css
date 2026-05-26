@@ -34,12 +34,178 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
     display:none !important
 }
 
+body:has(#fund_portfolio_content),
+main.container:has(#fund_portfolio_content) {
+  overflow-x: hidden;
+}
+
+.fund-portfolio-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 18px 32px;
+}
+
+.fund-portfolio-header {
+  text-align: center;
+}
+
+.fund-portfolio-header p {
+  margin: 10px auto 0;
+  max-width: 760px;
+  color: #546e7a;
+}
+
+.fund-portfolio-shell {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.fund-portfolio-sidebar {
+  position: sticky;
+  top: 82px;
+}
+
+.fund-portfolio-side-nav {
+  background: transparent;
+  border-left: 3px solid #ef9a9a;
+  box-shadow: none;
+  height: auto;
+  line-height: normal;
+  padding: 6px 0 6px 10px;
+}
+
+.fund-portfolio-side-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 10px;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #37474f;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.fund-portfolio-side-nav a:hover,
+.fund-portfolio-side-nav a:focus {
+  background: #f5f7f8 !important;
+  box-shadow: none !important;
+  color: #d84315 !important;
+}
+
+.fund-portfolio-side-nav i {
+  color: #78909c;
+  font-size: 20px;
+}
+
+.fund-portfolio-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fund-portfolio-main > .divider {
+  display: none;
+}
+
+.fund-portfolio-section {
+  border-top: 1px solid #eceff1;
+  margin: 0 0 22px;
+  padding-top: 24px;
+  scroll-margin-top: 86px;
+}
+
+.fund-portfolio-section + .fund-portfolio-section {
+  margin-top: 0;
+}
+
+#portfolio-overview {
+  order: 1;
+}
+
+#portfolio-analysis {
+  order: 2;
+}
+
+#portfolio-owned {
+  order: 3;
+}
+
+#portfolio-watch {
+  order: 4;
+}
+
+#portfolio-add {
+  order: 5;
+}
+
+#portfolio-recognize {
+  order: 6;
+}
+
+.fund-portfolio-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.fund-portfolio-section-heading h4 {
+  margin: 0;
+}
+
+.fund-portfolio-section-heading span {
+  color: #90a4ae;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.fund-portfolio-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.fund-portfolio-metric {
+  border: 1px solid #eceff1;
+  border-radius: 6px;
+  padding: 12px 14px;
+  min-width: 0;
+}
+
+.fund-portfolio-metric span {
+  display: block;
+  color: #78909c;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.fund-portfolio-metric strong {
+  display: block;
+  margin-top: 6px;
+  color: #263238;
+  font-size: 20px;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
 .fund-portfolio-chart-group {
   margin-top: 18px;
 }
 
 .fund-portfolio-chart-panel {
   margin-bottom: 18px;
+}
+
+.fund-portfolio-page .fund-portfolio-chart-panel.col {
+  width: 100%;
 }
 
 .fund-portfolio-chart-panel h5 {
@@ -57,7 +223,64 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
   min-height: 420px;
 }
 
+@media only screen and (min-width: 1600px) {
+  .fund-portfolio-page .fund-portfolio-chart-panel.col {
+    width: 50%;
+  }
+}
+
 @media only screen and (max-width: 600px) {
+  .fund-portfolio-page {
+    overflow-x: hidden;
+    padding: 0 12px 24px;
+  }
+
+  .fund-portfolio-shell {
+    display: block;
+  }
+
+  .fund-portfolio-sidebar {
+    position: sticky;
+    top: 56px;
+    z-index: 2;
+    background: #fff;
+    border-bottom: 1px solid #eceff1;
+    margin: 0 -12px 16px;
+    padding: 8px 12px;
+  }
+
+  .fund-portfolio-side-nav {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    border-left: 0;
+    padding: 0 0 4px;
+    scrollbar-width: none;
+  }
+
+  .fund-portfolio-side-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fund-portfolio-side-nav a {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+
+  .fund-portfolio-side-nav i {
+    font-size: 18px;
+  }
+
+  .fund-portfolio-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fund-portfolio-section {
+    overflow-x: auto;
+  }
+
   .fund-portfolio-chart {
     min-height: 320px;
   }

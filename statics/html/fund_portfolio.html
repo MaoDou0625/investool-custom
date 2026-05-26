@@ -1,7 +1,9 @@
 {{ template "header" . }}
-<div id="fund_portfolio_content" class="section">
-    <h2 class="center">我的基金</h2>
-    <p class="center">保存已持有或意向观察基金，并基于当前数据生成质量评分和操作提示。以下内容仅用于投资辅助，不构成投资建议。</p>
+<div id="fund_portfolio_content" class="fund-portfolio-page">
+    <div class="fund-portfolio-header section">
+        <h2>我的基金</h2>
+        <p>保存已持有或意向观察基金，并基于当前数据生成质量评分和操作提示。以下内容仅用于投资辅助，不构成投资建议。</p>
+    </div>
 
     {{ if .Message }}
     <div class="row">
@@ -12,7 +14,49 @@
     </div>
     {{ end }}
 
-    <div class="section">
+    <div class="fund-portfolio-shell">
+        <aside class="fund-portfolio-sidebar">
+            <nav class="fund-portfolio-side-nav" aria-label="我的基金板块导航">
+                <a href="#portfolio-overview"><i class="material-icons">dashboard</i><span>组合总览</span></a>
+                {{ if .ExposureReport.HasData }}<a href="#portfolio-analysis"><i class="material-icons">insights</i><span>图表分析</span></a>{{ end }}
+                <a href="#portfolio-owned"><i class="material-icons">account_balance_wallet</i><span>已持有</span></a>
+                <a href="#portfolio-watch"><i class="material-icons">visibility</i><span>观察池</span></a>
+                <a href="#portfolio-add"><i class="material-icons">add_circle_outline</i><span>添加/导入</span></a>
+            </nav>
+        </aside>
+
+        <div class="fund-portfolio-main">
+            <section id="portfolio-overview" class="section fund-portfolio-section">
+                <div class="fund-portfolio-section-heading">
+                    <h4>组合总览</h4>
+                    <span>Portfolio</span>
+                </div>
+                <div class="fund-portfolio-metrics">
+                    <div class="fund-portfolio-metric">
+                        <span>已持有基金</span>
+                        <strong>{{ len .OwnedAdvices }}</strong>
+                    </div>
+                    <div class="fund-portfolio-metric">
+                        <span>观察基金</span>
+                        <strong>{{ len .WatchAdvices }}</strong>
+                    </div>
+                    <div class="fund-portfolio-metric">
+                        <span>暴露覆盖</span>
+                        <strong>{{ .ExposureReport.CoveredWeightText }}</strong>
+                    </div>
+                    <div class="fund-portfolio-metric">
+                        <span>本地数据</span>
+                        <strong>{{ .PortfolioFile }}</strong>
+                    </div>
+                </div>
+                {{ if .ExposureReport.HasData }}
+                <p class="grey-text">当前组合已经生成主题、重仓股、风险收益、历史收益和替代基金对比图。左侧导航可以直接跳转到对应板块。</p>
+                {{ else }}
+                <p class="grey-text">添加已持有基金后，会在这里汇总组合暴露、操作建议和持仓分析。</p>
+                {{ end }}
+            </section>
+
+    <div id="portfolio-add" class="section fund-portfolio-section">
         <h4>添加或更新基金</h4>
         {{ if .ScreenshotDraft }}
         <div class="section blue lighten-5" style="padding: 16px;">
@@ -85,7 +129,7 @@
         <p class="grey-text">本地数据文件：{{ .PortfolioFile }}</p>
     </div>
 
-    <div class="section">
+    <div id="portfolio-recognize" class="section fund-portfolio-section">
         <h4>支付宝截图识别</h4>
         <form action="{{ .FundPortfolioURL }}/recognize" method="POST" enctype="multipart/form-data">
             <div class="file-field input-field">
@@ -117,7 +161,7 @@
     <div class="divider"></div>
 
     {{ if .ExposureReport.HasData }}
-    <div class="section">
+    <div id="portfolio-analysis" class="section fund-portfolio-section">
         <h4>主题暴露与持仓分析</h4>
         <p class="grey-text">
             按已持有基金当前总值、行业占比和重仓股估算；ETF联接基金会自动穿透到目标ETF后参与持仓分析。
@@ -170,7 +214,7 @@
     <div class="divider"></div>
     {{ end }}
 
-    <div class="section">
+    <div id="portfolio-owned" class="section fund-portfolio-section">
         <h4>已持有</h4>
         {{ if eq (len .OwnedAdvices) 0 }}
         <p class="grey-text">暂无已持有基金。</p>
@@ -240,7 +284,7 @@
         {{ end }}
     </div>
 
-    <div class="section">
+    <div id="portfolio-watch" class="section fund-portfolio-section">
         <h4>意向观察</h4>
         {{ if eq (len .WatchAdvices) 0 }}
         <p class="grey-text">暂无意向观察基金。</p>
@@ -302,6 +346,8 @@
             </tbody>
         </table>
         {{ end }}
+            </div>
+        </div>
     </div>
 </div>
 {{ template "footer" . }}
