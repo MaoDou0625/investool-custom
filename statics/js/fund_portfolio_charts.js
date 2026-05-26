@@ -84,6 +84,12 @@
     }
   }
 
+  function resizeCharts() {
+    chartInstances.forEach(function (chart) {
+      chart.resize();
+    });
+  }
+
   function sumBy(rows, fieldName) {
     var total = 0;
     rows.forEach(function (row) {
@@ -575,10 +581,7 @@
     renderHistory(data);
     renderCorrelation(data);
     renderComparison(data);
-    window.addEventListener("resize", function () {
-      chartInstances.forEach(function (chart) {
-        chart.resize();
-      });
-    });
+    window.fundPortfolioResizeCharts = resizeCharts;
+    window.addEventListener("resize", resizeCharts);
   });
 })();

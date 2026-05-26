@@ -17,16 +17,16 @@
     <div class="fund-portfolio-shell">
         <aside class="fund-portfolio-sidebar">
             <nav class="fund-portfolio-side-nav" aria-label="我的基金板块导航">
-                <a href="#portfolio-overview"><i class="material-icons">dashboard</i><span>组合总览</span></a>
-                {{ if .ExposureReport.HasData }}<a href="#portfolio-analysis"><i class="material-icons">insights</i><span>图表分析</span></a>{{ end }}
-                <a href="#portfolio-owned"><i class="material-icons">account_balance_wallet</i><span>已持有</span></a>
-                <a href="#portfolio-watch"><i class="material-icons">visibility</i><span>观察池</span></a>
-                <a href="#portfolio-add"><i class="material-icons">add_circle_outline</i><span>添加/导入</span></a>
+                <a href="#portfolio-overview" data-portfolio-nav="portfolio-overview"><i class="material-icons">dashboard</i><span>组合总览</span></a>
+                {{ if .ExposureReport.HasData }}<a href="#portfolio-analysis" data-portfolio-nav="portfolio-analysis"><i class="material-icons">insights</i><span>图表分析</span></a>{{ end }}
+                <a href="#portfolio-owned" data-portfolio-nav="portfolio-owned"><i class="material-icons">account_balance_wallet</i><span>已持有</span></a>
+                <a href="#portfolio-watch" data-portfolio-nav="portfolio-watch"><i class="material-icons">visibility</i><span>观察池</span></a>
+                <a href="#portfolio-add" data-portfolio-nav="portfolio-add"><i class="material-icons">add_circle_outline</i><span>添加/导入</span></a>
             </nav>
         </aside>
 
         <div class="fund-portfolio-main">
-            <section id="portfolio-overview" class="section fund-portfolio-section">
+            <section id="portfolio-overview" class="section fund-portfolio-section" data-portfolio-page="portfolio-overview">
                 <div class="fund-portfolio-section-heading">
                     <h4>组合总览</h4>
                     <span>Portfolio</span>
@@ -50,13 +50,13 @@
                     </div>
                 </div>
                 {{ if .ExposureReport.HasData }}
-                <p class="grey-text">当前组合已经生成主题、重仓股、风险收益、历史收益和替代基金对比图。左侧导航可以直接跳转到对应板块。</p>
+                <p class="grey-text">当前组合已经生成主题、重仓股、风险收益、历史收益和替代基金对比图。左侧导航可以直接切换到对应板块。</p>
                 {{ else }}
                 <p class="grey-text">添加已持有基金后，会在这里汇总组合暴露、操作建议和持仓分析。</p>
                 {{ end }}
             </section>
 
-    <div id="portfolio-add" class="section fund-portfolio-section">
+    <div id="portfolio-add" class="section fund-portfolio-section" data-portfolio-page="portfolio-add">
         <h4>添加或更新基金</h4>
         {{ if .ScreenshotDraft }}
         <div class="section blue lighten-5" style="padding: 16px;">
@@ -129,7 +129,7 @@
         <p class="grey-text">本地数据文件：{{ .PortfolioFile }}</p>
     </div>
 
-    <div id="portfolio-recognize" class="section fund-portfolio-section">
+    <div id="portfolio-recognize" class="section fund-portfolio-section" data-portfolio-page="portfolio-add">
         <h4>支付宝截图识别</h4>
         <form action="{{ .FundPortfolioURL }}/recognize" method="POST" enctype="multipart/form-data">
             <div class="file-field input-field">
@@ -161,7 +161,7 @@
     <div class="divider"></div>
 
     {{ if .ExposureReport.HasData }}
-    <div id="portfolio-analysis" class="section fund-portfolio-section">
+    <div id="portfolio-analysis" class="section fund-portfolio-section" data-portfolio-page="portfolio-analysis">
         <h4>主题暴露与持仓分析</h4>
         <p class="grey-text">
             按已持有基金当前总值、行业占比和重仓股估算；ETF联接基金会自动穿透到目标ETF后参与持仓分析。
@@ -171,7 +171,7 @@
         <script>
             window.fundPortfolioChartData = {{ .ExposureChartData }};
         </script>
-        <script defer src="{{ .HostURL }}/statics/js/fund_portfolio_charts.js?v=portfolio-chart-v3"></script>
+        <script defer src="{{ .HostURL }}/statics/js/fund_portfolio_charts.js?v=portfolio-chart-v4"></script>
 
         <div class="fund-portfolio-chart-group">
             <div class="row">
@@ -214,7 +214,7 @@
     <div class="divider"></div>
     {{ end }}
 
-    <div id="portfolio-owned" class="section fund-portfolio-section">
+    <div id="portfolio-owned" class="section fund-portfolio-section" data-portfolio-page="portfolio-owned">
         <h4>已持有</h4>
         {{ if eq (len .OwnedAdvices) 0 }}
         <p class="grey-text">暂无已持有基金。</p>
@@ -284,7 +284,7 @@
         {{ end }}
     </div>
 
-    <div id="portfolio-watch" class="section fund-portfolio-section">
+    <div id="portfolio-watch" class="section fund-portfolio-section" data-portfolio-page="portfolio-watch">
         <h4>意向观察</h4>
         {{ if eq (len .WatchAdvices) 0 }}
         <p class="grey-text">暂无意向观察基金。</p>
@@ -350,4 +350,5 @@
         </div>
     </div>
 </div>
+<script defer src="{{ .HostURL }}/statics/js/fund_portfolio_layout.js?v=portfolio-layout-v3"></script>
 {{ template "footer" . }}

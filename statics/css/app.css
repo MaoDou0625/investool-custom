@@ -90,10 +90,15 @@ main.container:has(#fund_portfolio_content) {
 }
 
 .fund-portfolio-side-nav a:hover,
-.fund-portfolio-side-nav a:focus {
+.fund-portfolio-side-nav a:focus,
+.fund-portfolio-side-nav a.is-active {
   background: #f5f7f8 !important;
   box-shadow: none !important;
   color: #d84315 !important;
+}
+
+.fund-portfolio-side-nav a.is-active i {
+  color: #d84315;
 }
 
 .fund-portfolio-side-nav i {
@@ -116,6 +121,10 @@ main.container:has(#fund_portfolio_content) {
   margin: 0 0 22px;
   padding-top: 24px;
   scroll-margin-top: 86px;
+}
+
+.fund-portfolio-section[hidden] {
+  display: none !important;
 }
 
 .fund-portfolio-section + .fund-portfolio-section {
@@ -251,19 +260,16 @@ main.container:has(#fund_portfolio_content) {
 
   .fund-portfolio-side-nav {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
-    overflow-x: auto;
+    overflow-x: visible;
     border-left: 0;
-    padding: 0 0 4px;
-    scrollbar-width: none;
-  }
-
-  .fund-portfolio-side-nav::-webkit-scrollbar {
-    display: none;
+    padding: 0;
   }
 
   .fund-portfolio-side-nav a {
-    flex: 0 0 auto;
+    flex: 1 1 100px;
+    justify-content: center;
     min-height: 36px;
     padding: 0 8px;
     font-size: 13px;
@@ -275,10 +281,6 @@ main.container:has(#fund_portfolio_content) {
 
   .fund-portfolio-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .fund-portfolio-section {
-    overflow-x: auto;
   }
 
   .fund-portfolio-chart {
