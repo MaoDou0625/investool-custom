@@ -124,6 +124,28 @@
             当前可覆盖组合金额占比：{{ .ExposureReport.CoveredWeightText }}。
         </p>
 
+        <script>
+            window.fundPortfolioChartData = {{ .ExposureChartData }};
+        </script>
+        <script defer src="{{ .HostURL }}/statics/js/fund_portfolio_charts.js?v=portfolio-chart-v1"></script>
+
+        <div class="fund-portfolio-chart-group">
+            <div class="row">
+                <div class="col s12 l7 fund-portfolio-chart-panel">
+                    <h5>主题暴露图</h5>
+                    <div id="fund-theme-exposure-chart" class="fund-portfolio-chart fund-portfolio-chart-tall"></div>
+                </div>
+                <div class="col s12 l5 fund-portfolio-chart-panel">
+                    <h5>ETF穿透流向</h5>
+                    <div id="fund-etf-lookthrough-chart" class="fund-portfolio-chart"></div>
+                </div>
+                <div class="col s12 fund-portfolio-chart-panel">
+                    <h5>前十大重仓股暴露</h5>
+                    <div id="fund-stock-exposure-chart" class="fund-portfolio-chart fund-portfolio-chart-wide"></div>
+                </div>
+            </div>
+        </div>
+
         {{ if gt (len .ExposureReport.ThemeExposures) 0 }}
         <h5>主题暴露</h5>
         <table class="striped responsive-table">

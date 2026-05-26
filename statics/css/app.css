@@ -33,3 +33,41 @@ h4 {
 ins.adsbygoogle[data-ad-status="unfilled"] {
     display:none !important
 }
+
+.fund-portfolio-chart-group {
+  margin-top: 18px;
+}
+
+.fund-portfolio-chart-panel {
+  margin-bottom: 18px;
+}
+
+.fund-portfolio-chart-panel h5 {
+  font-size: 18px;
+  font-weight: 500;
+  margin-top: 0;
+}
+
+.fund-portfolio-chart {
+  min-height: 340px;
+  width: 100%;
+}
+
+.fund-portfolio-chart-tall {
+  min-height: 420px;
+}
+
+.fund-portfolio-chart-wide {
+  min-height: 380px;
+}
+
+@media only screen and (max-width: 600px) {
+  .fund-portfolio-chart {
+    min-height: 320px;
+  }
+
+  .fund-portfolio-chart-tall,
+  .fund-portfolio-chart-wide {
+    min-height: 360px;
+  }
+}

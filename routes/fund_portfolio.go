@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"html/template"
 	"net/http"
 	"net/url"
 
@@ -15,20 +16,21 @@ import (
 const defaultFundPortfolioFilename = "./fund_portfolio.json"
 
 type fundPortfolioViewData struct {
-	Env              string
-	HostURL          string
-	Version          string
-	PageTitle        string
-	Error            string
-	Message          string
-	Portfolio        models.FundPortfolio
-	OwnedAdvices     []core.FundPortfolioAdvice
-	WatchAdvices     []core.FundPortfolioAdvice
-	AllAdvices       []core.FundPortfolioAdvice
-	ExposureReport   core.FundPortfolioExposureReport
-	ScreenshotDraft  *core.FundPortfolioScreenshotDraft
-	PortfolioFile    string
-	FundPortfolioURL string
+	Env               string
+	HostURL           string
+	Version           string
+	PageTitle         string
+	Error             string
+	Message           string
+	Portfolio         models.FundPortfolio
+	OwnedAdvices      []core.FundPortfolioAdvice
+	WatchAdvices      []core.FundPortfolioAdvice
+	AllAdvices        []core.FundPortfolioAdvice
+	ExposureReport    core.FundPortfolioExposureReport
+	ExposureChartData template.JS
+	ScreenshotDraft   *core.FundPortfolioScreenshotDraft
+	PortfolioFile     string
+	FundPortfolioURL  string
 }
 
 type fundPortfolioDeleteParam struct {
@@ -93,20 +95,21 @@ func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, scr
 	ownedAdvices, watchAdvices := splitFundPortfolioAdvices(allAdvices)
 
 	data := fundPortfolioViewData{
-		Env:              viper.GetString("env"),
-		HostURL:          viper.GetString("server.host_url"),
-		Version:          version.Version,
-		PageTitle:        "InvesTool | 我的基金",
-		Error:            pageErr,
-		Message:          message,
-		Portfolio:        portfolio,
-		OwnedAdvices:     ownedAdvices,
-		WatchAdvices:     watchAdvices,
-		AllAdvices:       allAdvices,
-		ExposureReport:   exposureReport,
-		ScreenshotDraft:  screenshotDraft,
-		PortfolioFile:    fundPortfolioFilename(),
-		FundPortfolioURL: viper.GetString("server.host_url") + "/fund/portfolio",
+		Env:               viper.GetString("env"),
+		HostURL:           viper.GetString("server.host_url"),
+		Version:           version.Version,
+		PageTitle:         "InvesTool | 我的基金",
+		Error:             pageErr,
+		Message:           message,
+		Portfolio:         portfolio,
+		OwnedAdvices:      ownedAdvices,
+		WatchAdvices:      watchAdvices,
+		AllAdvices:        allAdvices,
+		ExposureReport:    exposureReport,
+		ExposureChartData: buildFundPortfolioChartDataJSON(exposureReport),
+		ScreenshotDraft:   screenshotDraft,
+		PortfolioFile:     fundPortfolioFilename(),
+		FundPortfolioURL:  viper.GetString("server.host_url") + "/fund/portfolio",
 	}
 	c.HTML(http.StatusOK, "fund_portfolio.html", data)
 }
