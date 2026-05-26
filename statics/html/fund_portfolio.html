@@ -58,6 +58,32 @@
 
     <div id="portfolio-add" class="section fund-portfolio-section" data-portfolio-page="portfolio-add">
         <h4>添加或更新基金</h4>
+        {{ if .TianTianResult }}
+        <div class="fund-import-result {{ .TianTianResult.StatusClass }}">
+            <div class="fund-import-result-header">
+                <div>
+                    <strong>{{ .TianTianResult.Title }}</strong>
+                    <p>{{ .TianTianResult.Status }}</p>
+                </div>
+                <span>{{ .TianTianResult.Status }}</span>
+            </div>
+            <div class="fund-import-result-metrics">
+                <div><span>新增</span><strong>{{ .TianTianResult.AddedCount }}</strong></div>
+                <div><span>更新</span><strong>{{ .TianTianResult.UpdatedCount }}</strong></div>
+                <div><span>跳过</span><strong>{{ .TianTianResult.SkippedCount }}</strong></div>
+            </div>
+            {{ range .TianTianResult.Details }}
+            <p class="fund-import-result-line">{{ . }}</p>
+            {{ end }}
+            {{ if .TianTianResult.NextSteps }}
+            <ul class="fund-import-result-next">
+                {{ range .TianTianResult.NextSteps }}
+                <li>{{ . }}</li>
+                {{ end }}
+            </ul>
+            {{ end }}
+        </div>
+        {{ end }}
         {{ if .ScreenshotDraft }}
         <div class="section blue lighten-5" style="padding: 16px;">
             <h5>截图识别结果</h5>

@@ -238,6 +238,87 @@ main.container:has(#fund_portfolio_tiantian_content) {
   margin-top: 8px;
 }
 
+.fund-import-result {
+  background: #f8fafc;
+  border-left: 4px solid #90a4ae;
+  margin: 0 0 20px;
+  padding: 14px 16px;
+}
+
+.fund-import-result.is-neutral {
+  border-left-color: #607d8b;
+}
+
+.fund-import-result-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.fund-import-result-header strong {
+  color: #263238;
+  display: block;
+  font-size: 17px;
+}
+
+.fund-import-result-header p {
+  color: #607d8b;
+  margin: 4px 0 0;
+}
+
+.fund-import-result-header > span {
+  background: #607d8b;
+  border-radius: 999px;
+  color: #ffffff;
+  flex: 0 0 auto;
+  font-size: 12px;
+  line-height: 1;
+  padding: 7px 9px;
+}
+
+.fund-import-result-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 14px 0 10px;
+}
+
+.fund-import-result-metrics div {
+  background: #ffffff;
+  border: 1px solid #e0e7ef;
+  padding: 10px;
+}
+
+.fund-import-result-metrics span {
+  color: #78909c;
+  display: block;
+  font-size: 12px;
+}
+
+.fund-import-result-metrics strong {
+  color: #263238;
+  display: block;
+  font-size: 22px;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.fund-import-result-line {
+  color: #455a64;
+  margin: 6px 0 0;
+}
+
+.fund-import-result-next {
+  margin: 10px 0 0 18px;
+}
+
+.fund-import-result-next li {
+  color: #455a64;
+  list-style: disc;
+  margin: 4px 0;
+}
+
 .fund-manual-login-entry {
   align-items: center;
   border-top: 1px solid #e0e7ef;
@@ -471,6 +552,19 @@ main.container:has(#fund_portfolio_tiantian_content) {
 
   .fund-portfolio-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fund-import-result-header {
+    display: block;
+  }
+
+  .fund-import-result-header > span {
+    display: inline-block;
+    margin-top: 10px;
+  }
+
+  .fund-import-result-metrics {
+    grid-template-columns: 1fr;
   }
 
   .fund-manual-login-entry,

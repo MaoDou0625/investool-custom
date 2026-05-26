@@ -30,6 +30,7 @@ type fundPortfolioViewData struct {
 	ExposureReport    core.FundPortfolioExposureReport
 	ExposureChartData template.JS
 	ScreenshotDraft   *core.FundPortfolioScreenshotDraft
+	TianTianResult    *fundPortfolioTianTianImportResult
 	PortfolioFile     string
 	FundPortfolioURL  string
 }
@@ -113,6 +114,7 @@ func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, scr
 		ExposureReport:    exposureReport,
 		ExposureChartData: buildFundPortfolioChartDataJSON(exposureReport, allAdvices, portfolioHistory, correlationSources, correlationRefresh),
 		ScreenshotDraft:   screenshotDraft,
+		TianTianResult:    buildFundPortfolioTianTianResult(c.Query("tiantian_result")),
 		PortfolioFile:     fundPortfolioFilename(),
 		FundPortfolioURL:  fundPortfolioBaseURL(),
 	}

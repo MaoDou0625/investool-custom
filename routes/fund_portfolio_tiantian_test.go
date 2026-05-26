@@ -19,7 +19,21 @@ func TestFundPortfolioTianTianContinueURL(t *testing.T) {
 
 	require.True(t, strings.HasPrefix(target, "http://127.0.0.1:4869/fund/portfolio?"))
 	require.Contains(t, target, "message=")
+	require.Contains(t, target, "tiantian_result=manual_no_import")
 	require.True(t, strings.HasSuffix(target, "#portfolio-add"))
+}
+
+func TestBuildFundPortfolioTianTianResultNoImport(t *testing.T) {
+	result := buildFundPortfolioTianTianResult(fundPortfolioTianTianResultNoImport)
+
+	require.NotNil(t, result)
+	require.Equal(t, "未自动导入", result.Status)
+	require.Zero(t, result.AddedCount)
+	require.Zero(t, result.UpdatedCount)
+	require.Zero(t, result.SkippedCount)
+	require.NotEmpty(t, result.Details)
+	require.NotEmpty(t, result.NextSteps)
+	require.Nil(t, buildFundPortfolioTianTianResult(""))
 }
 
 func TestFundPortfolioTianTianLoginRendersManualFlow(t *testing.T) {
