@@ -25,6 +25,7 @@ type fundPortfolioViewData struct {
 	OwnedAdvices     []core.FundPortfolioAdvice
 	WatchAdvices     []core.FundPortfolioAdvice
 	AllAdvices       []core.FundPortfolioAdvice
+	ExposureReport   core.FundPortfolioExposureReport
 	ScreenshotDraft  *core.FundPortfolioScreenshotDraft
 	PortfolioFile    string
 	FundPortfolioURL string
@@ -87,6 +88,7 @@ func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, scr
 		holderStructures = queryFundHolderStructures(c, funds)
 	}
 
+	exposureReport := buildFundPortfolioExposureReport(c, portfolio, funds, pageErr)
 	allAdvices := core.EvaluateFundPortfolio(c, portfolio.Items, funds, holderStructures)
 	ownedAdvices, watchAdvices := splitFundPortfolioAdvices(allAdvices)
 
@@ -101,6 +103,7 @@ func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, scr
 		OwnedAdvices:     ownedAdvices,
 		WatchAdvices:     watchAdvices,
 		AllAdvices:       allAdvices,
+		ExposureReport:   exposureReport,
 		ScreenshotDraft:  screenshotDraft,
 		PortfolioFile:    fundPortfolioFilename(),
 		FundPortfolioURL: viper.GetString("server.host_url") + "/fund/portfolio",

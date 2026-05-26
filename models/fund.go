@@ -4,9 +4,11 @@ package models
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/axiaoxin-com/goutils"
@@ -30,6 +32,10 @@ type Fund struct {
 	IndexCode string `json:"index_code"`
 	// 跟踪标的名称
 	IndexName string `json:"index_name"`
+	// ETF联接基金的目标ETF代码
+	TargetETFCode string `json:"target_etf_code"`
+	// ETF联接基金的目标ETF名称
+	TargetETFName string `json:"target_etf_name"`
 	// 购买费率
 	Rate string `json:"rate"`
 	// 单位净值
@@ -324,6 +330,17 @@ func interfaceToFloat64(ctx context.Context, unk interface{}) (result float64) {
 	return
 }
 
+func interfaceToString(unk interface{}) string {
+	switch i := unk.(type) {
+	case string:
+		return strings.TrimSpace(i)
+	case nil:
+		return ""
+	default:
+		return strings.TrimSpace(fmt.Sprint(i))
+	}
+}
+
 // NewFund 创建 Fund 实例
 func NewFund(ctx context.Context, efund *eastmoney.RespFundInfo) *Fund {
 	stddev1 := interfaceToFloat64(ctx, efund.Tssj.Datas.Stddev1)
@@ -356,6 +373,8 @@ func NewFund(ctx context.Context, efund *eastmoney.RespFundInfo) *Fund {
 		EstablishedDate:  efund.Jjxq.Datas.Estabdate,
 		IndexCode:        efund.Jjxq.Datas.Indexcode,
 		IndexName:        efund.Jjxq.Datas.Indexname,
+		TargetETFCode:    interfaceToString(efund.Jjcc.Datas.InverstPosition.Etfcode),
+		TargetETFName:    interfaceToString(efund.Jjcc.Datas.InverstPosition.Etfshortname),
 		Rate:             efund.Jjxq.Datas.Rate,
 		UnitNav:          interfaceToFloat64(ctx, efund.Jjxq.Datas.Dwjz),
 		AccumulatedNav:   interfaceToFloat64(ctx, efund.Jjxq.Datas.Ljjz),
