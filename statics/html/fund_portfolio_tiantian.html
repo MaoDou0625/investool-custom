@@ -1,0 +1,43 @@
+{{ template "header" . }}
+<div id="fund_portfolio_tiantian_content" class="fund-portfolio-page fund-manual-login-page">
+    <div class="fund-portfolio-header section">
+        <h2>天天基金迁移</h2>
+        <p>本地页面只负责打开官网和接续导入，不保存、不读取、不提交登录密码。</p>
+    </div>
+
+    <div class="fund-manual-login-panel">
+        <div class="fund-manual-login-steps">
+            <div class="fund-manual-login-step">
+                <span>1</span>
+                <strong>打开官网</strong>
+                <p>在新标签页进入天天基金。</p>
+            </div>
+            <div class="fund-manual-login-step">
+                <span>2</span>
+                <strong>手动登录</strong>
+                <p>账号、密码和验证码都由你在官网完成。</p>
+            </div>
+            <div class="fund-manual-login-step">
+                <span>3</span>
+                <strong>继续导入</strong>
+                <p>回到本地页面上传截图或手动录入。</p>
+            </div>
+        </div>
+
+        <div class="fund-manual-login-actions">
+            <a id="tiantian-open-link" href="{{ .TianTianFundURL }}" target="_blank" rel="noopener noreferrer" class="btn waves-effect waves-light red lighten-2">
+                <i class="material-icons left">open_in_new</i>打开天天基金
+            </a>
+            <a id="tiantian-continue-link" href="{{ .ContinueURL }}" class="btn waves-effect waves-light blue lighten-1">
+                <i class="material-icons left">check_circle</i>我已登录，继续导入
+            </a>
+            <a href="{{ .FundPortfolioURL }}#portfolio-add" class="btn-flat waves-effect">
+                <i class="material-icons left">arrow_back</i>返回我的基金
+            </a>
+        </div>
+
+        <p id="tiantian-login-status" class="fund-manual-login-status" data-default-text="等待打开天天基金官网">等待打开天天基金官网</p>
+    </div>
+</div>
+<script defer src="{{ .HostURL }}/statics/js/fund_portfolio_tiantian.js?v=tiantian-login-v1"></script>
+{{ template "footer" . }}

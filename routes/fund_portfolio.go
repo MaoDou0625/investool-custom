@@ -114,7 +114,7 @@ func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, scr
 		ExposureChartData: buildFundPortfolioChartDataJSON(exposureReport, allAdvices, portfolioHistory, correlationSources, correlationRefresh),
 		ScreenshotDraft:   screenshotDraft,
 		PortfolioFile:     fundPortfolioFilename(),
-		FundPortfolioURL:  viper.GetString("server.host_url") + "/fund/portfolio",
+		FundPortfolioURL:  fundPortfolioBaseURL(),
 	}
 	c.HTML(http.StatusOK, "fund_portfolio.html", data)
 }
@@ -131,6 +131,10 @@ func fundPortfolioFilename() string {
 	return filename
 }
 
+func fundPortfolioBaseURL() string {
+	return viper.GetString("server.host_url") + "/fund/portfolio"
+}
+
 func redirectFundPortfolio(c *gin.Context, message string, err string) {
 	values := url.Values{}
 	if message != "" {
@@ -140,7 +144,7 @@ func redirectFundPortfolio(c *gin.Context, message string, err string) {
 		values.Set("error", err)
 	}
 
-	target := viper.GetString("server.host_url") + "/fund/portfolio"
+	target := fundPortfolioBaseURL()
 	if encoded := values.Encode(); encoded != "" {
 		target += "?" + encoded
 	}

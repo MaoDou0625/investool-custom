@@ -35,7 +35,9 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
 }
 
 body:has(#fund_portfolio_content),
-main.container:has(#fund_portfolio_content) {
+body:has(#fund_portfolio_tiantian_content),
+main.container:has(#fund_portfolio_content),
+main.container:has(#fund_portfolio_tiantian_content) {
   overflow-x: hidden;
 }
 
@@ -155,6 +157,10 @@ main.container:has(#fund_portfolio_content) {
   order: 6;
 }
 
+#portfolio-tiantian {
+  order: 7;
+}
+
 .fund-portfolio-section-heading {
   display: flex;
   align-items: baseline;
@@ -230,6 +236,86 @@ main.container:has(#fund_portfolio_content) {
 
 .fund-correlation-refresh-status {
   margin-top: 8px;
+}
+
+.fund-manual-login-entry {
+  align-items: center;
+  border-top: 1px solid #e0e7ef;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  padding-top: 14px;
+}
+
+.fund-manual-login-entry p {
+  margin: 4px 0 0;
+}
+
+.fund-manual-login-page {
+  max-width: 920px;
+}
+
+.fund-manual-login-panel {
+  border-top: 1px solid #eceff1;
+  padding-top: 24px;
+}
+
+.fund-manual-login-steps {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fund-manual-login-step {
+  border-left: 3px solid #ef9a9a;
+  padding: 2px 0 2px 14px;
+}
+
+.fund-manual-login-step span {
+  align-items: center;
+  background: #ef5350;
+  border-radius: 50%;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  height: 26px;
+  justify-content: center;
+  margin-bottom: 10px;
+  width: 26px;
+}
+
+.fund-manual-login-step strong {
+  color: #263238;
+  display: block;
+  font-size: 16px;
+}
+
+.fund-manual-login-step p {
+  color: #607d8b;
+  margin: 6px 0 0;
+}
+
+.fund-manual-login-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.fund-manual-login-status {
+  background: #f5f7f8;
+  border-left: 3px solid #b0bec5;
+  color: #546e7a;
+  margin: 18px 0 0;
+  padding: 10px 12px;
+}
+
+.fund-manual-login-status.is-active {
+  background: #e8f5e9;
+  border-left-color: #43a047;
+  color: #2e7d32;
 }
 
 .fund-correlation-summary {
@@ -385,6 +471,22 @@ main.container:has(#fund_portfolio_content) {
 
   .fund-portfolio-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fund-manual-login-entry,
+  .fund-manual-login-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .fund-manual-login-entry .btn,
+  .fund-manual-login-actions .btn,
+  .fund-manual-login-actions .btn-flat {
+    width: 100%;
+  }
+
+  .fund-manual-login-steps {
+    grid-template-columns: 1fr;
   }
 
   .fund-portfolio-chart {
