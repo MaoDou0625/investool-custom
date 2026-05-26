@@ -8,9 +8,8 @@ import (
 )
 
 type fundPortfolioChartData struct {
-	Themes   []fundPortfolioThemeChartPoint `json:"themes"`
-	ETFLinks []fundPortfolioETFChartLink    `json:"etfLinks"`
-	Stocks   []fundPortfolioStockChartPoint `json:"stocks"`
+	Themes []fundPortfolioThemeChartPoint `json:"themes"`
+	Stocks []fundPortfolioStockChartPoint `json:"stocks"`
 }
 
 type fundPortfolioThemeChartPoint struct {
@@ -18,14 +17,6 @@ type fundPortfolioThemeChartPoint struct {
 	Amount  float64 `json:"amount"`
 	Weight  float64 `json:"weight"`
 	Sources string  `json:"sources"`
-}
-
-type fundPortfolioETFChartLink struct {
-	SourceName string  `json:"sourceName"`
-	TargetName string  `json:"targetName"`
-	Amount     float64 `json:"amount"`
-	Weight     float64 `json:"weight"`
-	Status     string  `json:"status"`
 }
 
 type fundPortfolioStockChartPoint struct {
@@ -49,18 +40,6 @@ func buildFundPortfolioChartDataJSON(report core.FundPortfolioExposureReport) te
 			Amount:  exposure.Amount,
 			Weight:  exposure.Weight,
 			Sources: exposure.SourceFunds,
-		})
-	}
-	for _, lookThrough := range report.ETFLookThroughs {
-		if lookThrough.CurrentWeight <= 0 {
-			continue
-		}
-		payload.ETFLinks = append(payload.ETFLinks, fundPortfolioETFChartLink{
-			SourceName: lookThrough.FundCode + " " + lookThrough.FundName,
-			TargetName: lookThrough.TargetETFCode + " " + lookThrough.TargetETFName,
-			Amount:     lookThrough.CurrentAmount,
-			Weight:     lookThrough.CurrentWeight,
-			Status:     lookThrough.Status,
 		})
 	}
 	for _, exposure := range report.StockExposures {

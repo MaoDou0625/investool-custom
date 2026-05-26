@@ -118,118 +118,29 @@
 
     {{ if .ExposureReport.HasData }}
     <div class="section">
-        <h4>主题暴露与ETF穿透</h4>
+        <h4>主题暴露与持仓分析</h4>
         <p class="grey-text">
-            按已持有基金当前总值、行业占比和重仓股估算；ETF联接基金会优先穿透到目标ETF。
+            按已持有基金当前总值、行业占比和重仓股估算；ETF联接基金会自动穿透到目标ETF后参与持仓分析。
             当前可覆盖组合金额占比：{{ .ExposureReport.CoveredWeightText }}。
         </p>
 
         <script>
             window.fundPortfolioChartData = {{ .ExposureChartData }};
         </script>
-        <script defer src="{{ .HostURL }}/statics/js/fund_portfolio_charts.js?v=portfolio-chart-v1"></script>
+        <script defer src="{{ .HostURL }}/statics/js/fund_portfolio_charts.js?v=portfolio-chart-v2"></script>
 
         <div class="fund-portfolio-chart-group">
             <div class="row">
-                <div class="col s12 l7 fund-portfolio-chart-panel">
+                <div class="col s12 l6 fund-portfolio-chart-panel">
                     <h5>主题暴露图</h5>
                     <div id="fund-theme-exposure-chart" class="fund-portfolio-chart fund-portfolio-chart-tall"></div>
                 </div>
-                <div class="col s12 l5 fund-portfolio-chart-panel">
-                    <h5>ETF穿透流向</h5>
-                    <div id="fund-etf-lookthrough-chart" class="fund-portfolio-chart"></div>
-                </div>
-                <div class="col s12 fund-portfolio-chart-panel">
+                <div class="col s12 l6 fund-portfolio-chart-panel">
                     <h5>前十大重仓股暴露</h5>
-                    <div id="fund-stock-exposure-chart" class="fund-portfolio-chart fund-portfolio-chart-wide"></div>
+                    <div id="fund-stock-exposure-chart" class="fund-portfolio-chart fund-portfolio-chart-tall"></div>
                 </div>
             </div>
         </div>
-
-        {{ if gt (len .ExposureReport.ThemeExposures) 0 }}
-        <h5>主题暴露</h5>
-        <table class="striped responsive-table">
-            <thead>
-                <tr>
-                    <th>主题</th>
-                    <th>估算金额</th>
-                    <th>组合占比</th>
-                    <th>主要来源</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{ range .ExposureReport.ThemeExposures }}
-                <tr>
-                    <td><strong>{{ .Theme }}</strong></td>
-                    <td>{{ .AmountText }}</td>
-                    <td>{{ .WeightText }}</td>
-                    <td>{{ .SourceFunds }}</td>
-                </tr>
-                {{ end }}
-            </tbody>
-        </table>
-        {{ end }}
-
-        {{ if gt (len .ExposureReport.ETFLookThroughs) 0 }}
-        <h5>ETF穿透</h5>
-        <table class="striped responsive-table">
-            <thead>
-                <tr>
-                    <th>持有基金</th>
-                    <th>当前金额/仓位</th>
-                    <th>目标ETF</th>
-                    <th>目标ETF股票仓位</th>
-                    <th>状态</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{ range .ExposureReport.ETFLookThroughs }}
-                <tr>
-                    <td>
-                        <strong>{{ .FundCode }}</strong><br>
-                        {{ .FundName }}
-                    </td>
-                    <td>{{ .CurrentAmountText }}<br>{{ .CurrentWeightText }}</td>
-                    <td>
-                        <strong>{{ .TargetETFCode }}</strong><br>
-                        {{ .TargetETFName }}
-                    </td>
-                    <td>{{ .TargetStockAsset }}</td>
-                    <td>{{ .Status }}</td>
-                </tr>
-                {{ end }}
-            </tbody>
-        </table>
-        {{ end }}
-
-        {{ if gt (len .ExposureReport.StockExposures) 0 }}
-        <h5>前二十大重仓股穿透</h5>
-        <table class="striped responsive-table">
-            <thead>
-                <tr>
-                    <th>股票</th>
-                    <th>主题/行业</th>
-                    <th>组合占比</th>
-                    <th>估算金额</th>
-                    <th>来源</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{ range .ExposureReport.StockExposures }}
-                <tr>
-                    <td>
-                        <strong>{{ .StockName }}</strong><br>
-                        <span class="grey-text">{{ .StockCode }}</span>
-                    </td>
-                    <td>{{ .Theme }}<br><span class="grey-text">{{ .Industry }}</span></td>
-                    <td>{{ .WeightText }}</td>
-                    <td>{{ .AmountText }}</td>
-                    <td>{{ .ExposureSummary }}</td>
-                </tr>
-                {{ end }}
-            </tbody>
-        </table>
-        {{ end }}
 
         {{ range .ExposureReport.Warnings }}
         <p class="orange-text text-darken-2">{{ . }}</p>

@@ -57,17 +57,12 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
   min-height: 420px;
 }
 
-.fund-portfolio-chart-wide {
-  min-height: 380px;
-}
-
 @media only screen and (max-width: 600px) {
   .fund-portfolio-chart {
     min-height: 320px;
   }
 
-  .fund-portfolio-chart-tall,
-  .fund-portfolio-chart-wide {
+  .fund-portfolio-chart-tall {
     min-height: 360px;
   }
 }

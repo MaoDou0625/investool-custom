@@ -53,7 +53,7 @@
   function showUnavailable(id) {
     var el = document.getElementById(id);
     if (el) {
-      el.innerHTML = '<p class="grey-text center-align">图表库加载失败，表格数据仍可查看。</p>';
+      el.innerHTML = '<p class="grey-text center-align">图表库加载失败，请刷新后重试。</p>';
     }
   }
 
@@ -109,84 +109,6 @@
               return formatPercent(params.value, 1);
             },
           },
-        },
-      ],
-    });
-  }
-
-  function renderETFLookThrough(data) {
-    var chart = initChart("fund-etf-lookthrough-chart");
-    if (!chart) {
-      return;
-    }
-    var links = (data.etfLinks || []).map(function (link) {
-      return {
-        source: trimLabel(link.sourceName, 16),
-        target: trimLabel(link.targetName, 16),
-        value: Number(link.weight || 0),
-        raw: link,
-      };
-    });
-    if (links.length === 0) {
-      chart.setOption({
-        title: {
-          text: "暂无可穿透ETF",
-          left: "center",
-          top: "middle",
-          textStyle: { color: "#9e9e9e", fontSize: 14, fontWeight: "normal" },
-        },
-      });
-      return;
-    }
-
-    var nodeMap = {};
-    links.forEach(function (link) {
-      nodeMap[link.source] = true;
-      nodeMap[link.target] = true;
-    });
-    var nodes = Object.keys(nodeMap).map(function (name) {
-      return { name: name };
-    });
-
-    chart.setOption({
-      color: palette,
-      tooltip: {
-        trigger: "item",
-        triggerOn: "mousemove",
-        formatter: function (params) {
-          if (params.dataType !== "edge") {
-            return params.name;
-          }
-          var raw = params.data.raw || {};
-          return [
-            "<strong>" + raw.sourceName + "</strong>",
-            "目标ETF：" + raw.targetName,
-            "组合占比：" + formatPercent(raw.weight, 1),
-            "当前金额：" + formatAmount(raw.amount),
-            "状态：" + raw.status,
-          ].join("<br>");
-        },
-      },
-      series: [
-        {
-          type: "sankey",
-          data: nodes,
-          links: links,
-          left: 4,
-          right: 112,
-          top: 16,
-          bottom: 16,
-          nodeWidth: 12,
-          nodeGap: 12,
-          draggable: false,
-          label: {
-            fontSize: 10,
-            color: "#374151",
-            overflow: "truncate",
-            width: 104,
-          },
-          lineStyle: { color: "gradient", opacity: 0.35, curveness: 0.5 },
-          emphasis: { focus: "adjacency" },
         },
       ],
     });
@@ -258,13 +180,11 @@
     }
     if (!window.echarts) {
       showUnavailable("fund-theme-exposure-chart");
-      showUnavailable("fund-etf-lookthrough-chart");
       showUnavailable("fund-stock-exposure-chart");
       return;
     }
 
     renderThemeExposure(data);
-    renderETFLookThrough(data);
     renderStockExposure(data);
     window.addEventListener("resize", function () {
       chartInstances.forEach(function (chart) {
