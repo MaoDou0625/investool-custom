@@ -516,6 +516,52 @@
     });
   }
 
+  function formatNAVTrendTooltipItem(params) {
+    var point = params.data || {};
+    return [
+      "<strong>" + (point.fundName || params.seriesName || "") + "</strong>",
+      "日期：" + (point.date || params.name || ""),
+      "累计涨跌幅：" + formatPercent(point.value, 2),
+      "单位净值：" + (point.unitNav || "--"),
+    ].join("<br>");
+  }
+
+  function findNearestNAVTrendTooltipItem(chart, params) {
+    var rows = Array.isArray(params) ? params : [params];
+    var pointer = chart.__fundPortfolioNAVTrendPointer;
+    var best = null;
+    var bestDistance = Infinity;
+
+    rows.forEach(function (item) {
+      var point = item.data || {};
+      if (!point || point.value === null || point.value === undefined || point.value === "") {
+        return;
+      }
+      if (!pointer) {
+        best = best || item;
+        return;
+      }
+
+      var value = Number(point.value || 0);
+      var pixel = chart.convertToPixel({ seriesIndex: item.seriesIndex }, [item.dataIndex, value]);
+      if (!pixel || pixel.length < 2) {
+        var y = chart.convertToPixel({ yAxisIndex: 0 }, value);
+        pixel = [0, y];
+      }
+      if (!pixel || pixel.length < 2 || !isFinite(pixel[1])) {
+        return;
+      }
+
+      var distance = Math.abs(pixel[1] - pointer.y);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = item;
+      }
+    });
+
+    return best || rows[0] || {};
+  }
+
   function renderNAVTrend(data) {
     var trend = data.navTrend || {};
     var rows = trend.series || [];
@@ -566,6 +612,15 @@
     });
 
     chart.clear();
+    if (chart.__fundPortfolioNAVTrendMoveHandler) {
+      chart.getZr().off("mousemove", chart.__fundPortfolioNAVTrendMoveHandler);
+    }
+    chart.__fundPortfolioNAVTrendPointer = null;
+    chart.__fundPortfolioNAVTrendMoveHandler = function (event) {
+      chart.__fundPortfolioNAVTrendPointer = { x: event.offsetX, y: event.offsetY };
+    };
+    chart.getZr().on("mousemove", chart.__fundPortfolioNAVTrendMoveHandler);
+
     chart.setOption({
       color: palette,
       title: {
@@ -577,16 +632,11 @@
         subtextStyle: { color: "#607d8b" },
       },
       tooltip: {
-        trigger: "item",
+        trigger: "axis",
         triggerOn: "mousemove|click",
+        axisPointer: { type: "line", snap: true },
         formatter: function (params) {
-          var point = params.data || {};
-          return [
-            "<strong>" + (point.fundName || params.seriesName) + "</strong>",
-            "日期：" + (point.date || params.name || ""),
-            "累计涨跌幅：" + formatPercent(point.value, 2),
-            "单位净值：" + (point.unitNav || "--"),
-          ].join("<br>");
+          return formatNAVTrendTooltipItem(findNearestNAVTrendTooltipItem(chart, params));
         },
       },
       legend: {
