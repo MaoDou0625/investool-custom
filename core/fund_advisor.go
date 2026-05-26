@@ -17,6 +17,9 @@ type FundPortfolioAdvice struct {
 	Grade           string                              `json:"grade"`
 	Action          string                              `json:"action"`
 	RiskLevel       string                              `json:"risk_level"`
+	HasPosition     bool                                `json:"has_position"`
+	CostAmount      float64                             `json:"cost_amount"`
+	CurrentAmount   float64                             `json:"current_amount"`
 	ProfitRatio     float64                             `json:"profit_ratio"`
 	ProfitAmount    float64                             `json:"profit_amount"`
 	Reasons         []string                            `json:"reasons"`
@@ -105,17 +108,31 @@ func (a FundPortfolioAdvice) ActionBadgeClass() string {
 }
 
 func (a FundPortfolioAdvice) ProfitRatioText() string {
-	if a.ProfitRatio == 0 {
+	if !a.HasPosition {
 		return "--"
 	}
 	return fmt.Sprintf("%.2f%%", a.ProfitRatio)
 }
 
 func (a FundPortfolioAdvice) ProfitAmountText() string {
-	if a.ProfitAmount == 0 {
+	if !a.HasPosition {
 		return "--"
 	}
 	return fmt.Sprintf("%.2f", a.ProfitAmount)
+}
+
+func (a FundPortfolioAdvice) CostAmountText() string {
+	if !a.HasPosition {
+		return "--"
+	}
+	return fmt.Sprintf("%.2f", a.CostAmount)
+}
+
+func (a FundPortfolioAdvice) CurrentAmountText() string {
+	if !a.HasPosition {
+		return "--"
+	}
+	return fmt.Sprintf("%.2f", a.CurrentAmount)
 }
 
 func (a *FundPortfolioAdvice) evaluateQuality(ctx context.Context, fund *models.Fund) {
@@ -220,18 +237,17 @@ func (a *FundPortfolioAdvice) evaluateHolderStructure(holderStructure eastmoney.
 }
 
 func (a *FundPortfolioAdvice) evaluatePosition(fund *models.Fund) {
-	if !a.Item.IsOwned() {
-		return
-	}
-	if a.Item.CostNav <= 0 || fund.UnitNav <= 0 {
-		a.Warnings = append(a.Warnings, "未填写成本净值或缺少当前净值，无法估算持仓收益")
+	metrics, ok, warnings := CalculateFundPositionMetrics(a.Item, fund)
+	a.Warnings = append(a.Warnings, warnings...)
+	if !ok {
 		return
 	}
 
-	a.ProfitRatio = (fund.UnitNav - a.Item.CostNav) / a.Item.CostNav * 100
-	if a.Item.HoldingShares > 0 {
-		a.ProfitAmount = (fund.UnitNav - a.Item.CostNav) * a.Item.HoldingShares
-	}
+	a.HasPosition = true
+	a.CostAmount = metrics.CostAmount
+	a.CurrentAmount = metrics.CurrentAmount
+	a.ProfitRatio = metrics.ProfitRatio
+	a.ProfitAmount = metrics.ProfitAmount
 
 	switch {
 	case a.ProfitRatio <= -15 && a.Score >= 70:

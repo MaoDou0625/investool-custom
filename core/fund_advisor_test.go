@@ -31,7 +31,30 @@ func TestEvaluateFundPortfolioItemOwnedStrongFund(t *testing.T) {
 	require.Equal(t, "继续持有，可按目标仓位定投", advice.Action)
 	require.InDelta(t, 11.11, advice.ProfitRatio, 0.01)
 	require.InDelta(t, 200, advice.ProfitAmount, 0.01)
+	require.True(t, advice.HasPosition)
+	require.InDelta(t, 1800, advice.CostAmount, 0.01)
+	require.InDelta(t, 2000, advice.CurrentAmount, 0.01)
 	require.NotEmpty(t, advice.Reasons)
+}
+
+func TestEvaluateFundPortfolioItemUsesHoldingAmountForProfit(t *testing.T) {
+	ctx := context.Background()
+	fund := testAdvisorFund(t)
+	item := models.FundPortfolioItem{
+		Code:          "260104",
+		Status:        models.FundPortfolioStatusOwned,
+		CostNav:       1.8,
+		HoldingShares: 1000,
+		HoldingAmount: 1900,
+	}
+
+	advice := EvaluateFundPortfolioItem(ctx, item, fund, eastmoney.FundHolderStructureResult{})
+
+	require.True(t, advice.HasPosition)
+	require.InDelta(t, 1800, advice.CostAmount, 0.01)
+	require.InDelta(t, 1900, advice.CurrentAmount, 0.01)
+	require.InDelta(t, 5.56, advice.ProfitRatio, 0.01)
+	require.InDelta(t, 100, advice.ProfitAmount, 0.01)
 }
 
 func TestEvaluateFundPortfolioItemMissingFund(t *testing.T) {

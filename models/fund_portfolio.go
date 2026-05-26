@@ -31,6 +31,7 @@ type FundPortfolioItem struct {
 	Status        string  `json:"status" form:"status"`
 	CostNav       float64 `json:"cost_nav" form:"cost_nav"`
 	HoldingShares float64 `json:"holding_shares" form:"holding_shares"`
+	// HoldingAmount is the current holding market value shown by the user's broker/app.
 	HoldingAmount float64 `json:"holding_amount" form:"holding_amount"`
 	TargetWeight  float64 `json:"target_weight" form:"target_weight"`
 	Note          string  `json:"note" form:"note"`

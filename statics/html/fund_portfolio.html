@@ -39,7 +39,7 @@
             <div class="row">
                 <div class="input-field col s12 m6 l3">
                     <input id="portfolio_holding_amount" name="holding_amount" type="number" step="0.01" min="0">
-                    <label for="portfolio_holding_amount">投入金额</label>
+                    <label for="portfolio_holding_amount">当前总值</label>
                 </div>
                 <div class="input-field col s12 m6 l3">
                     <input id="portfolio_target_weight" name="target_weight" type="number" step="0.1" min="0">
@@ -89,13 +89,15 @@
                     <td>
                         成本净值：{{ printf "%.4f" .Item.CostNav }}<br>
                         持有份额：{{ printf "%.2f" .Item.HoldingShares }}<br>
+                        当前总值：{{ .CurrentAmountText }}<br>
+                        成本金额：{{ .CostAmountText }}<br>
                         目标仓位：{{ printf "%.1f" .Item.TargetWeight }}%
                     </td>
                     <td>
                         {{ if .Fund }}
                         当前净值：{{ printf "%.4f" .Fund.UnitNav }}<br>
                         日涨跌幅：{{ printf "%.2f" .Fund.DailyProfitRatio }}%<br>
-                        持仓收益：{{ .ProfitRatioText }}<br>
+                        持仓收益率：{{ .ProfitRatioText }}<br>
                         浮动盈亏：{{ .ProfitAmountText }}
                         {{ else }}--{{ end }}
                     </td>
