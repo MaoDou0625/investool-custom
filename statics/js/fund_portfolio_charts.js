@@ -547,11 +547,12 @@
         name: row.name || row.code,
         type: "line",
         smooth: true,
-        showSymbol: false,
-        symbolSize: 6,
+        showSymbol: true,
+        symbol: "circle",
+        symbolSize: 5,
         connectNulls: false,
-        triggerLineEvent: true,
-        emphasis: { focus: "series", lineStyle: { width: 4 } },
+        emphasis: { focus: "series", scale: 1.6, lineStyle: { width: 4 } },
+        itemStyle: { opacity: 0.82 },
         data: dates.map(function (date) {
           var point = pointByDate[date];
           return point ? {
