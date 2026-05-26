@@ -15,6 +15,7 @@ type fundPortfolioChartData struct {
 	StockConcentration fundPortfolioStockConcentration       `json:"stockConcentration"`
 	RiskReturns        []fundPortfolioRiskReturnChartPoint   `json:"riskReturns"`
 	History            []fundPortfolioHistoryChartPoint      `json:"history"`
+	NAVTrend           fundPortfolioNAVTrendChartData        `json:"navTrend"`
 	Correlation        fundPortfolioCorrelationChartData     `json:"correlation"`
 	CorrelationRefresh fundPortfolioCorrelationRefreshData   `json:"correlationRefresh"`
 	Comparisons        []fundPortfolioComparisonChartPoint   `json:"comparisons"`
@@ -77,6 +78,22 @@ type fundPortfolioHistoryChartPoint struct {
 	Profit      float64 `json:"profit"`
 }
 
+type fundPortfolioNAVTrendChartData struct {
+	Series []fundPortfolioNAVTrendSeries `json:"series"`
+}
+
+type fundPortfolioNAVTrendSeries struct {
+	Code   string                       `json:"code"`
+	Name   string                       `json:"name"`
+	Points []fundPortfolioNAVTrendPoint `json:"points"`
+}
+
+type fundPortfolioNAVTrendPoint struct {
+	Date        string  `json:"date"`
+	UnitNAV     float64 `json:"unitNav"`
+	ReturnRatio float64 `json:"returnRatio"`
+}
+
 type fundPortfolioCorrelationChartData struct {
 	Labels []string                               `json:"labels"`
 	Points []fundPortfolioCorrelationHeatmapPoint `json:"points"`
@@ -110,6 +127,7 @@ func buildFundPortfolioChartDataJSON(
 	payload := fundPortfolioChartData{
 		StockConcentration: buildStockConcentration(report.StockExposures),
 		History:            buildHistoryChartPoints(history),
+		NAVTrend:           buildFundNAVTrendChartData(correlationSources),
 		Correlation:        buildCorrelationChartData(correlationSources),
 		CorrelationRefresh: correlationRefresh,
 		ComparisonMetrics: []fundPortfolioComparisonMetricConfig{

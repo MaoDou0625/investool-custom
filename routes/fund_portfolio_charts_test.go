@@ -90,6 +90,7 @@ func TestBuildFundPortfolioChartDataJSON(t *testing.T) {
 	require.InDelta(t, 7.6, payload.StockConcentration.Top10Weight, 0.01)
 	require.Len(t, payload.RiskReturns, 2)
 	require.Len(t, payload.History, 3)
+	require.Len(t, payload.NAVTrend.Series, 2)
 	require.Len(t, payload.Correlation.Labels, 2)
 	require.Len(t, payload.Correlation.Points, 4)
 	require.True(t, payload.CorrelationRefresh.Needed)

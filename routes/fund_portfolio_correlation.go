@@ -41,6 +41,7 @@ type fundPortfolioCorrelationRefreshRequest struct {
 
 type fundPortfolioCorrelationRefreshResponse struct {
 	Correlation fundPortfolioCorrelationChartData   `json:"correlation"`
+	NAVTrend    fundPortfolioNAVTrendChartData      `json:"navTrend"`
 	Refresh     fundPortfolioCorrelationRefreshData `json:"refresh"`
 	Warnings    []string                            `json:"warnings"`
 }

@@ -57,17 +57,7 @@ func buildCorrelationChartData(sources []fundPortfolioCorrelationSource) fundPor
 }
 
 func fundNAVDailyReturns(history eastmoney.FundNAVHistory) map[string]float64 {
-	points := make(eastmoney.FundNAVHistory, 0, len(history))
-	for _, point := range history {
-		if point.Date == "" || point.UnitNAV <= 0 {
-			continue
-		}
-		points = append(points, point)
-	}
-	sort.SliceStable(points, func(i, j int) bool {
-		return points[i].Date < points[j].Date
-	})
-
+	points := normalizeFundNAVHistory(history)
 	returns := map[string]float64{}
 	for idx := 1; idx < len(points); idx++ {
 		prev := points[idx-1].UnitNAV

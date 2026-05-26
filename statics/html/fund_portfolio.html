@@ -171,7 +171,7 @@
         <script>
             window.fundPortfolioChartData = {{ .ExposureChartData }};
         </script>
-        <script defer src="{{ .HostURL }}/statics/js/fund_portfolio_charts.js?v=portfolio-chart-v5"></script>
+        <script defer src="{{ .HostURL }}/statics/js/fund_portfolio_charts.js?v=portfolio-chart-v6"></script>
 
         <div class="fund-portfolio-chart-group">
             <div class="row">
@@ -192,6 +192,12 @@
                 <div class="col s12 l6 fund-portfolio-chart-panel">
                     <h5>组合净值/收益率历史曲线</h5>
                     <div id="fund-portfolio-history-chart" class="fund-portfolio-chart"></div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12 fund-portfolio-chart-panel fund-portfolio-chart-wide">
+                    <h5>基金近期净值波动</h5>
+                    <div id="fund-nav-trend-chart" class="fund-portfolio-chart"></div>
                 </div>
             </div>
             <div class="row">

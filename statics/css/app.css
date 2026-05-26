@@ -257,6 +257,10 @@ main.container:has(#fund_portfolio_content) {
   .fund-portfolio-page .fund-portfolio-chart-panel.col {
     width: 50%;
   }
+
+  .fund-portfolio-page .fund-portfolio-chart-panel.col.fund-portfolio-chart-wide {
+    width: 100%;
+  }
 }
 
 @media only screen and (max-width: 600px) {

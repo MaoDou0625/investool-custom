@@ -28,6 +28,7 @@ func FundPortfolioCorrelationRefresh(c *gin.Context) {
 	sources, refresh, warnings := refreshFundPortfolioCorrelationSources(c.Request.Context(), funds, time.Now())
 	c.JSON(http.StatusOK, fundPortfolioCorrelationRefreshResponse{
 		Correlation: buildCorrelationChartData(sources),
+		NAVTrend:    buildFundNAVTrendChartData(sources),
 		Refresh:     refresh,
 		Warnings:    warnings,
 	})

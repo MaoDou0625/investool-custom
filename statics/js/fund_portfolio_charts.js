@@ -7,6 +7,7 @@
     "fund-stock-exposure-chart",
     "fund-risk-return-chart",
     "fund-portfolio-history-chart",
+    "fund-nav-trend-chart",
     "fund-correlation-heatmap-chart",
     "fund-comparison-radar-chart",
   ];
@@ -70,6 +71,7 @@
     if (!chart) {
       return;
     }
+    chart.clear();
     chart.setOption({
       title: {
         text: message,
@@ -457,6 +459,7 @@
     if (!chart) {
       return;
     }
+    chart.clear();
     chart.setOption({
       tooltip: {
         position: "top",
@@ -513,6 +516,97 @@
     });
   }
 
+  function renderNAVTrend(data) {
+    var trend = data.navTrend || {};
+    var rows = trend.series || [];
+    if (rows.length === 0) {
+      renderEmpty("fund-nav-trend-chart", "近期基金净值缓存不足，刷新后生成波动曲线");
+      return;
+    }
+
+    var chart = initChart("fund-nav-trend-chart");
+    if (!chart) {
+      return;
+    }
+
+    var datesMap = {};
+    rows.forEach(function (row) {
+      (row.points || []).forEach(function (point) {
+        if (point.date) {
+          datesMap[point.date] = true;
+        }
+      });
+    });
+    var dates = Object.keys(datesMap).sort();
+    var series = rows.map(function (row) {
+      var pointByDate = {};
+      (row.points || []).forEach(function (point) {
+        pointByDate[point.date] = point;
+      });
+      return {
+        name: row.name || row.code,
+        type: "line",
+        smooth: true,
+        showSymbol: false,
+        connectNulls: false,
+        emphasis: { focus: "series" },
+        data: dates.map(function (date) {
+          var point = pointByDate[date];
+          return point ? Number(point.returnRatio || 0).toFixed(2) : null;
+        }),
+      };
+    });
+
+    chart.clear();
+    chart.setOption({
+      color: palette,
+      title: {
+        text: "近90日累计涨跌幅",
+        subtext: "按各基金自身净值归一化，首个交易日为0%",
+        left: 8,
+        top: 0,
+        textStyle: { fontSize: 14, fontWeight: 500 },
+        subtextStyle: { color: "#607d8b" },
+      },
+      tooltip: {
+        trigger: "axis",
+        formatter: function (params) {
+          var lines = ["<strong>" + params[0].axisValue + "</strong>"];
+          params.forEach(function (item) {
+            if (item.value == null || item.value === "") {
+              return;
+            }
+            lines.push(item.marker + item.seriesName + "：" + formatPercent(item.value, 2));
+          });
+          return lines.join("<br>");
+        },
+      },
+      legend: {
+        type: "scroll",
+        top: 36,
+        left: 8,
+        right: 8,
+        itemWidth: 10,
+        itemHeight: 10,
+      },
+      grid: { top: 92, right: 34, bottom: 42, left: 58, containLabel: true },
+      xAxis: {
+        type: "category",
+        data: dates,
+        boundaryGap: false,
+        axisLabel: { formatter: function (value) { return value.slice(5); } },
+      },
+      yAxis: {
+        type: "value",
+        name: "累计涨跌幅",
+        axisLabel: { formatter: "{value}%" },
+        splitLine: { lineStyle: { color: "#eceff1" } },
+        scale: true,
+      },
+      series: series,
+    });
+  }
+
   function setCorrelationRefreshStatus(state, message) {
     var box = document.getElementById("fund-correlation-refresh-status");
     if (!box) {
@@ -550,8 +644,12 @@
       if (payload.correlation) {
         data.correlation = payload.correlation;
         renderCorrelation(data);
-        resizeCharts();
       }
+      if (payload.navTrend) {
+        data.navTrend = payload.navTrend;
+        renderNAVTrend(data);
+      }
+      resizeCharts();
       data.correlationRefresh = payload.refresh || {};
       var warnings = payload.warnings || [];
       if (warnings.length > 0) {
@@ -636,6 +734,7 @@
     renderStockExposure(data);
     renderRiskReturn(data);
     renderHistory(data);
+    renderNAVTrend(data);
     renderCorrelation(data);
     maybeRefreshCorrelation(data);
     renderComparison(data);
