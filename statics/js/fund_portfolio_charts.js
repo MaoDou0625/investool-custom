@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var chartInstances = [];
+  var chartInstances = {};
   var chartIds = [
     "fund-theme-exposure-chart",
     "fund-stock-exposure-chart",
@@ -57,8 +57,11 @@
     if (!el || !window.echarts) {
       return null;
     }
+    if (chartInstances[id]) {
+      return chartInstances[id];
+    }
     var chart = echarts.init(el);
-    chartInstances.push(chart);
+    chartInstances[id] = chart;
     return chart;
   }
 
@@ -85,8 +88,8 @@
   }
 
   function resizeCharts() {
-    chartInstances.forEach(function (chart) {
-      chart.resize();
+    Object.keys(chartInstances).forEach(function (id) {
+      chartInstances[id].resize();
     });
   }
 
@@ -510,6 +513,60 @@
     });
   }
 
+  function setCorrelationRefreshStatus(state, message) {
+    var box = document.getElementById("fund-correlation-refresh-status");
+    if (!box) {
+      return;
+    }
+    var text = box.querySelector("[data-correlation-refresh-message]");
+    var progress = box.querySelector(".progress");
+    if (text) {
+      text.textContent = message || "";
+    }
+    if (progress) {
+      progress.hidden = state !== "loading";
+    }
+    box.hidden = !message;
+    box.classList.toggle("is-error", state === "error");
+    box.classList.toggle("is-done", state === "done");
+  }
+
+  function maybeRefreshCorrelation(data) {
+    var refresh = data.correlationRefresh || {};
+    if (!refresh.needed || !refresh.url || !window.fetch) {
+      return;
+    }
+    setCorrelationRefreshStatus("loading", refresh.message || "正在刷新历史净值数据...");
+    fetch(refresh.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ funds: refresh.funds || [] }),
+    }).then(function (resp) {
+      if (!resp.ok) {
+        throw new Error("HTTP " + resp.status);
+      }
+      return resp.json();
+    }).then(function (payload) {
+      if (payload.correlation) {
+        data.correlation = payload.correlation;
+        renderCorrelation(data);
+        resizeCharts();
+      }
+      data.correlationRefresh = payload.refresh || {};
+      var warnings = payload.warnings || [];
+      if (warnings.length > 0) {
+        setCorrelationRefreshStatus("error", warnings[0]);
+        return;
+      }
+      setCorrelationRefreshStatus("done", "历史净值数据已更新。");
+      window.setTimeout(function () {
+        setCorrelationRefreshStatus("done", "");
+      }, 2800);
+    }).catch(function (err) {
+      setCorrelationRefreshStatus("error", "历史净值刷新失败，继续使用本地缓存：" + err.message);
+    });
+  }
+
   function renderComparison(data) {
     var rows = (data.comparisons || []);
     var metrics = (data.comparisonMetrics || []);
@@ -580,6 +637,7 @@
     renderRiskReturn(data);
     renderHistory(data);
     renderCorrelation(data);
+    maybeRefreshCorrelation(data);
     renderComparison(data);
     window.fundPortfolioResizeCharts = resizeCharts;
     window.addEventListener("resize", resizeCharts);

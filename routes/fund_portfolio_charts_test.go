@@ -69,8 +69,16 @@ func TestBuildFundPortfolioChartDataJSON(t *testing.T) {
 		buildChartCorrelationSource("002207", "鍓嶆捣寮€婧愰噾閾剁彔瀹濇贩鍚圕", []float64{1.00, 1.02, 1.01, 1.05, 1.07, 1.04, 1.08, 1.10, 1.12}),
 		buildChartCorrelationSource("000001", "鍊欓€夐粍閲慐TF鑱旀帴", []float64{1.00, 1.01, 1.03, 1.06, 1.05, 1.08, 1.11, 1.10, 1.14}),
 	}
+	correlationRefresh := fundPortfolioCorrelationRefreshData{
+		Needed: true,
+		URL:    "/fund/portfolio/correlation/refresh",
+		Funds: []fundPortfolioCorrelationFund{
+			{Code: "002207", Name: "鍓嶆捣寮€婧愰噾閾剁彔瀹濇贩鍚圕"},
+			{Code: "000001", Name: "鍊欓€夐粍閲慐TF鑱旀帴"},
+		},
+	}
 
-	raw := []byte(buildFundPortfolioChartDataJSON(report, advices, history, correlationSources))
+	raw := []byte(buildFundPortfolioChartDataJSON(report, advices, history, correlationSources, correlationRefresh))
 	payload := fundPortfolioChartData{}
 	require.NoError(t, json.Unmarshal(raw, &payload))
 
@@ -84,6 +92,7 @@ func TestBuildFundPortfolioChartDataJSON(t *testing.T) {
 	require.Len(t, payload.History, 3)
 	require.Len(t, payload.Correlation.Labels, 2)
 	require.Len(t, payload.Correlation.Points, 4)
+	require.True(t, payload.CorrelationRefresh.Needed)
 	require.Len(t, payload.ComparisonMetrics, 6)
 	require.Len(t, payload.Comparisons, 2)
 }

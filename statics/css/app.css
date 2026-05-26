@@ -228,6 +228,27 @@ main.container:has(#fund_portfolio_content) {
   width: 100%;
 }
 
+.fund-correlation-refresh-status {
+  margin-top: 8px;
+}
+
+.fund-correlation-refresh-status .progress {
+  margin: 0 0 8px;
+}
+
+.fund-correlation-refresh-status p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.fund-correlation-refresh-status.is-error p {
+  color: #ef6c00 !important;
+}
+
+.fund-correlation-refresh-status.is-done p {
+  color: #2e7d32 !important;
+}
+
 .fund-portfolio-chart-tall {
   min-height: 420px;
 }

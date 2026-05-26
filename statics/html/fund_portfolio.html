@@ -171,7 +171,7 @@
         <script>
             window.fundPortfolioChartData = {{ .ExposureChartData }};
         </script>
-        <script defer src="{{ .HostURL }}/statics/js/fund_portfolio_charts.js?v=portfolio-chart-v4"></script>
+        <script defer src="{{ .HostURL }}/statics/js/fund_portfolio_charts.js?v=portfolio-chart-v5"></script>
 
         <div class="fund-portfolio-chart-group">
             <div class="row">
@@ -198,6 +198,12 @@
                 <div class="col s12 l6 fund-portfolio-chart-panel">
                     <h5>基金相关性热力图</h5>
                     <div id="fund-correlation-heatmap-chart" class="fund-portfolio-chart"></div>
+                    <div id="fund-correlation-refresh-status" class="fund-correlation-refresh-status" hidden>
+                        <div class="progress">
+                            <div class="indeterminate"></div>
+                        </div>
+                        <p class="grey-text" data-correlation-refresh-message></p>
+                    </div>
                 </div>
                 <div class="col s12 l6 fund-portfolio-chart-panel">
                     <h5>替代基金/候选基金对比</h5>

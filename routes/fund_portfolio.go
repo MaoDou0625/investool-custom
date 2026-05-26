@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/axiaoxin-com/investool/core"
 	"github.com/axiaoxin-com/investool/datacenter/eastmoney"
@@ -95,7 +96,7 @@ func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, scr
 	ownedAdvices, watchAdvices := splitFundPortfolioAdvices(allAdvices)
 	portfolioHistory, historyWarnings := loadAndUpdateFundPortfolioHistory(allAdvices)
 	exposureReport.Warnings = append(exposureReport.Warnings, historyWarnings...)
-	correlationSources, correlationWarnings := loadFundPortfolioCorrelationSources(c.Request.Context(), allAdvices)
+	correlationSources, correlationRefresh, correlationWarnings := loadFundPortfolioCorrelationSources(allAdvices, time.Now())
 	exposureReport.Warnings = append(exposureReport.Warnings, correlationWarnings...)
 
 	data := fundPortfolioViewData{
@@ -110,7 +111,7 @@ func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, scr
 		WatchAdvices:      watchAdvices,
 		AllAdvices:        allAdvices,
 		ExposureReport:    exposureReport,
-		ExposureChartData: buildFundPortfolioChartDataJSON(exposureReport, allAdvices, portfolioHistory, correlationSources),
+		ExposureChartData: buildFundPortfolioChartDataJSON(exposureReport, allAdvices, portfolioHistory, correlationSources, correlationRefresh),
 		ScreenshotDraft:   screenshotDraft,
 		PortfolioFile:     fundPortfolioFilename(),
 		FundPortfolioURL:  viper.GetString("server.host_url") + "/fund/portfolio",

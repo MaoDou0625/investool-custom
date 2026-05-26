@@ -16,6 +16,7 @@ type fundPortfolioChartData struct {
 	RiskReturns        []fundPortfolioRiskReturnChartPoint   `json:"riskReturns"`
 	History            []fundPortfolioHistoryChartPoint      `json:"history"`
 	Correlation        fundPortfolioCorrelationChartData     `json:"correlation"`
+	CorrelationRefresh fundPortfolioCorrelationRefreshData   `json:"correlationRefresh"`
 	Comparisons        []fundPortfolioComparisonChartPoint   `json:"comparisons"`
 	ComparisonMetrics  []fundPortfolioComparisonMetricConfig `json:"comparisonMetrics"`
 }
@@ -104,11 +105,13 @@ func buildFundPortfolioChartDataJSON(
 	advices []core.FundPortfolioAdvice,
 	history models.FundPortfolioHistory,
 	correlationSources []fundPortfolioCorrelationSource,
+	correlationRefresh fundPortfolioCorrelationRefreshData,
 ) template.JS {
 	payload := fundPortfolioChartData{
 		StockConcentration: buildStockConcentration(report.StockExposures),
 		History:            buildHistoryChartPoints(history),
 		Correlation:        buildCorrelationChartData(correlationSources),
+		CorrelationRefresh: correlationRefresh,
 		ComparisonMetrics: []fundPortfolioComparisonMetricConfig{
 			{Name: "评分", Max: 100},
 			{Name: "预期收益", Max: 100},
