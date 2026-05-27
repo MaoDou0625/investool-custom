@@ -40,11 +40,7 @@ func ParseFundPortfolioTianTianXLSX(r io.Reader) (FundPortfolioTianTianImportRep
 	if len(report.Drafts) == 0 {
 		return report, fmt.Errorf("未识别到天天基金持仓行，请确认上传的是天天基金导出的基金持仓 xlsx")
 	}
-	for _, draft := range report.Drafts {
-		if !draft.HasImportableData() {
-			report.Warnings = append(report.Warnings, fmt.Sprintf("%s 未识别到金额、份额或成本字段", draft.DisplayName()))
-		}
-	}
+	appendTianTianDraftWarnings(&report)
 	return report, nil
 }
 

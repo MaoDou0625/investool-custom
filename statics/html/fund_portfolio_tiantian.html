@@ -20,7 +20,7 @@
             <div class="fund-manual-login-step">
                 <span>3</span>
                 <strong>识别导入</strong>
-                <p>复制持仓页文本，回到本地页面预览或保存。</p>
+                <p>导出基金持仓 xlsx，回到本地页面预览或保存。</p>
             </div>
         </div>
 
@@ -47,7 +47,7 @@
 
     <div class="fund-tiantian-import-panel">
         <h4>登录后导入调试</h4>
-        <p class="grey-text">可以上传天天基金导出的持仓 xlsx，也可以把持仓页文本复制到这里。识别预览不会写入本地文件，保存只会处理识别到金额、份额或成本的基金。</p>
+        <p class="grey-text">上传天天基金导出的持仓 xlsx。识别预览不会写入本地文件，保存只会处理识别到金额、份额或成本的基金。</p>
 
         {{ if .ImportResult }}
         <div class="fund-import-result {{ .ImportResult.StatusClass }}">
@@ -98,24 +98,6 @@
                 </div>
             </form>
             <p class="grey-text">导出表中的“金额（元）”会作为当前总值；当“持仓收益（元）”仍是 -- 时，按待确认买入处理，不估算份额和成本净值。</p>
-        </div>
-
-        <div class="fund-tiantian-text-import">
-            <h5>网页文本导入</h5>
-        <form action="{{ .FundPortfolioURL }}/tiantian/import" method="POST">
-            <div class="input-field">
-                <textarea id="tiantian_holding_text" name="holding_text" class="materialize-textarea fund-tiantian-import-textarea" required>{{ .ImportText }}</textarea>
-                <label for="tiantian_holding_text">天天基金持仓页文本</label>
-            </div>
-            <div class="fund-manual-login-actions">
-                <button type="submit" name="action" value="preview" class="btn waves-effect waves-light blue lighten-1">
-                    <i class="material-icons left">fact_check</i>识别预览
-                </button>
-                <button type="submit" name="action" value="save" class="btn waves-effect waves-light red lighten-2">
-                    <i class="material-icons left">save</i>识别并保存完整项
-                </button>
-            </div>
-        </form>
         </div>
 
         {{ if .ImportWarnings }}

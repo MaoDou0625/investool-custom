@@ -24,7 +24,6 @@ type fundPortfolioTianTianViewData struct {
 	OpenInDefaultBrowserURL string
 	ContinueURL             string
 	LaunchMessage           string
-	ImportText              string
 	ImportResult            *fundPortfolioTianTianImportResult
 	ImportPreview           []core.FundPortfolioTianTianHoldingDraft
 	ImportWarnings          []string

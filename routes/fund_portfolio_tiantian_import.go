@@ -2,52 +2,27 @@ package routes
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/axiaoxin-com/investool/core"
 	"github.com/axiaoxin-com/investool/models"
-	"github.com/gin-gonic/gin"
 )
 
 const fundPortfolioTianTianImportActionSave = "save"
-
-func FundPortfolioTianTianImportText(c *gin.Context) {
-	importText := c.PostForm("holding_text")
-	action := c.PostForm("action")
-	data := newFundPortfolioTianTianViewData()
-	data.ImportText = importText
-
-	report, err := core.ParseFundPortfolioTianTianText(importText)
-	if err != nil {
-		data.Error = err.Error()
-		c.HTML(http.StatusOK, "fund_portfolio_tiantian.html", data)
-		return
-	}
-
-	data.ImportPreview = report.Drafts
-	data.ImportWarnings = report.Warnings
-	if action == fundPortfolioTianTianImportActionSave {
-		data.ImportResult = saveTianTianImportDrafts(report.Drafts)
-	} else {
-		data.ImportResult = previewTianTianImportDrafts(report.Drafts, report.Warnings)
-	}
-	c.HTML(http.StatusOK, "fund_portfolio_tiantian.html", data)
-}
 
 func previewTianTianImportDrafts(
 	drafts []core.FundPortfolioTianTianHoldingDraft,
 	warnings []string,
 ) *fundPortfolioTianTianImportResult {
 	result := &fundPortfolioTianTianImportResult{
-		Title:       "天天基金文本识别结果",
+		Title:       "天天基金识别结果",
 		Status:      "识别预览",
 		StatusClass: "is-neutral",
 		Details: []string{
 			fmt.Sprintf("识别到 %d 只基金，当前还没有写入本地持仓文件。", len(drafts)),
-			"确认字段无误后，可以点击“识别并保存完整项”。",
+			"确认字段无误后，可以点击保存按钮写入本地持仓。",
 		},
 		NextSteps: []string{
-			"如果金额、份额或成本字段为空，请复制持仓详情页更多文字后再识别。",
+			"如果金额、份额或成本字段为空，请确认导出的 Excel 是否已经完成份额确认。",
 			"保存只会写入识别到金额、份额或成本的基金，只有代码的项目会被跳过。",
 		},
 	}
@@ -59,7 +34,7 @@ func previewTianTianImportDrafts(
 
 func saveTianTianImportDrafts(drafts []core.FundPortfolioTianTianHoldingDraft) *fundPortfolioTianTianImportResult {
 	result := &fundPortfolioTianTianImportResult{
-		Title:       "天天基金文本导入结果",
+		Title:       "天天基金导入结果",
 		Status:      "已处理",
 		StatusClass: "is-neutral",
 	}
@@ -86,7 +61,7 @@ func saveTianTianImportDrafts(drafts []core.FundPortfolioTianTianHoldingDraft) *
 		item := draft.Item
 		item.Status = models.FundPortfolioStatusOwned
 		if item.Note == "" {
-			item.Note = "Tiantian text import"
+			item.Note = "Tiantian import"
 		}
 		if err := store.Upsert(item); err != nil {
 			result.SkippedCount++
