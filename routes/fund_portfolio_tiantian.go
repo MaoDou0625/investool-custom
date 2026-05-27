@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/axiaoxin-com/investool/core"
 	"github.com/axiaoxin-com/investool/version"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -13,14 +14,20 @@ const tiantianFundHomeURL = "https://www.1234567.com.cn/"
 const fundPortfolioTianTianResultNoImport = "manual_no_import"
 
 type fundPortfolioTianTianViewData struct {
-	Env              string
-	HostURL          string
-	Version          string
-	PageTitle        string
-	Error            string
-	FundPortfolioURL string
-	TianTianFundURL  string
-	ContinueURL      string
+	Env                     string
+	HostURL                 string
+	Version                 string
+	PageTitle               string
+	Error                   string
+	FundPortfolioURL        string
+	TianTianFundURL         string
+	OpenInDefaultBrowserURL string
+	ContinueURL             string
+	LaunchMessage           string
+	ImportText              string
+	ImportResult            *fundPortfolioTianTianImportResult
+	ImportPreview           []core.FundPortfolioTianTianHoldingDraft
+	ImportWarnings          []string
 }
 
 type fundPortfolioTianTianImportResult struct {
@@ -35,15 +42,14 @@ type fundPortfolioTianTianImportResult struct {
 }
 
 func FundPortfolioTianTianLogin(c *gin.Context) {
-	c.HTML(http.StatusOK, "fund_portfolio_tiantian.html", fundPortfolioTianTianViewData{
-		Env:              viper.GetString("env"),
-		HostURL:          viper.GetString("server.host_url"),
-		Version:          version.Version,
-		PageTitle:        "InvesTool | 天天基金迁移",
-		FundPortfolioURL: fundPortfolioBaseURL(),
-		TianTianFundURL:  tiantianFundHomeURL,
-		ContinueURL:      fundPortfolioTianTianContinueURL(),
-	})
+	data := newFundPortfolioTianTianViewData()
+	if c.Query("opened") == "default" {
+		data.LaunchMessage = "已请求在默认浏览器打开天天基金。如果浏览器保存了账号密码，请在官网页面由你手动确认登录。"
+	}
+	if err := c.Query("error"); err != "" {
+		data.Error = err
+	}
+	c.HTML(http.StatusOK, "fund_portfolio_tiantian.html", data)
 }
 
 func FundPortfolioTianTianContinue(c *gin.Context) {
@@ -55,6 +61,19 @@ func fundPortfolioTianTianContinueURL() string {
 	values.Set("message", "天天基金接续完成：本次没有自动新增基金")
 	values.Set("tiantian_result", fundPortfolioTianTianResultNoImport)
 	return fundPortfolioBaseURL() + "?" + values.Encode() + "#portfolio-add"
+}
+
+func newFundPortfolioTianTianViewData() fundPortfolioTianTianViewData {
+	return fundPortfolioTianTianViewData{
+		Env:                     viper.GetString("env"),
+		HostURL:                 viper.GetString("server.host_url"),
+		Version:                 version.Version,
+		PageTitle:               "InvesTool | 天天基金迁移",
+		FundPortfolioURL:        fundPortfolioBaseURL(),
+		TianTianFundURL:         tiantianFundHomeURL,
+		OpenInDefaultBrowserURL: fundPortfolioBaseURL() + "/tiantian/open",
+		ContinueURL:             fundPortfolioTianTianContinueURL(),
+	}
 }
 
 func buildFundPortfolioTianTianResult(code string) *fundPortfolioTianTianImportResult {

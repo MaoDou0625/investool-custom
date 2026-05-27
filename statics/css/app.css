@@ -399,6 +399,42 @@ main.container:has(#fund_portfolio_tiantian_content) {
   color: #2e7d32;
 }
 
+.fund-tiantian-import-panel {
+  border-top: 1px solid #eceff1;
+  margin-top: 28px;
+  padding-top: 24px;
+}
+
+.fund-tiantian-import-panel h4 {
+  margin-top: 0;
+}
+
+.fund-tiantian-import-textarea {
+  min-height: 180px !important;
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.fund-tiantian-warning-list {
+  background: #fff8e1;
+  border-left: 3px solid #ffb300;
+  color: #795548;
+  margin-top: 16px;
+  padding: 10px 12px;
+}
+
+.fund-tiantian-warning-list p {
+  margin: 4px 0;
+}
+
+.fund-tiantian-preview-table {
+  margin-top: 18px;
+}
+
+.fund-tiantian-preview-table td,
+.fund-tiantian-preview-table th {
+  vertical-align: top;
+}
+
 .fund-correlation-summary {
   display: grid;
   gap: 14px;

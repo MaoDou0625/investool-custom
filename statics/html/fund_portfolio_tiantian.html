@@ -2,31 +2,34 @@
 <div id="fund_portfolio_tiantian_content" class="fund-portfolio-page fund-manual-login-page">
     <div class="fund-portfolio-header section">
         <h2>天天基金迁移</h2>
-        <p>本地页面只负责打开官网和接续导入，不保存、不读取、不提交登录密码。</p>
+        <p>本地页面只负责启动浏览器、接续识别和保存持仓，不保存、不读取、不提交登录密码。</p>
     </div>
 
     <div class="fund-manual-login-panel">
         <div class="fund-manual-login-steps">
             <div class="fund-manual-login-step">
                 <span>1</span>
-                <strong>打开官网</strong>
-                <p>在新标签页进入天天基金。</p>
+                <strong>启动官网</strong>
+                <p>优先用默认浏览器打开天天基金。</p>
             </div>
             <div class="fund-manual-login-step">
                 <span>2</span>
                 <strong>手动登录</strong>
-                <p>账号、密码和验证码都由你在官网完成。</p>
+                <p>账号、密码和验证码都由你在官网或浏览器密码管理器完成。</p>
             </div>
             <div class="fund-manual-login-step">
                 <span>3</span>
-                <strong>继续导入</strong>
-                <p>回到本地页面上传截图或手动录入。</p>
+                <strong>识别导入</strong>
+                <p>复制持仓页文本，回到本地页面预览或保存。</p>
             </div>
         </div>
 
         <div class="fund-manual-login-actions">
+            <a id="tiantian-open-default-link" href="{{ .OpenInDefaultBrowserURL }}" class="btn waves-effect waves-light red lighten-2">
+                <i class="material-icons left">launch</i>用默认浏览器打开
+            </a>
             <a id="tiantian-open-link" href="{{ .TianTianFundURL }}" target="_blank" rel="noopener noreferrer" class="btn waves-effect waves-light red lighten-2">
-                <i class="material-icons left">open_in_new</i>打开天天基金
+                <i class="material-icons left">open_in_new</i>在当前浏览器打开
             </a>
             <a id="tiantian-continue-link" href="{{ .ContinueURL }}" class="btn waves-effect waves-light blue lighten-1">
                 <i class="material-icons left">check_circle</i>我已登录，继续导入
@@ -37,7 +40,101 @@
         </div>
 
         <p id="tiantian-login-status" class="fund-manual-login-status" data-default-text="等待打开天天基金官网">等待打开天天基金官网</p>
+        {{ if .LaunchMessage }}
+        <p class="fund-manual-login-status is-active">{{ .LaunchMessage }}</p>
+        {{ end }}
+    </div>
+
+    <div class="fund-tiantian-import-panel">
+        <h4>登录后导入调试</h4>
+        <p class="grey-text">在天天基金持仓页选中持仓列表或持仓详情文本后复制到这里。识别预览不会写入本地文件，保存只会处理识别到金额、份额或成本的基金。</p>
+
+        {{ if .ImportResult }}
+        <div class="fund-import-result {{ .ImportResult.StatusClass }}">
+            <div class="fund-import-result-header">
+                <div>
+                    <strong>{{ .ImportResult.Title }}</strong>
+                    <p>{{ .ImportResult.Status }}</p>
+                </div>
+                <span>{{ .ImportResult.Status }}</span>
+            </div>
+            <div class="fund-import-result-metrics">
+                <div><span>新增</span><strong>{{ .ImportResult.AddedCount }}</strong></div>
+                <div><span>更新</span><strong>{{ .ImportResult.UpdatedCount }}</strong></div>
+                <div><span>跳过</span><strong>{{ .ImportResult.SkippedCount }}</strong></div>
+            </div>
+            {{ range .ImportResult.Details }}
+            <p class="fund-import-result-line">{{ . }}</p>
+            {{ end }}
+            {{ if .ImportResult.NextSteps }}
+            <ul class="fund-import-result-next">
+                {{ range .ImportResult.NextSteps }}
+                <li>{{ . }}</li>
+                {{ end }}
+            </ul>
+            {{ end }}
+        </div>
+        {{ end }}
+
+        <form action="{{ .FundPortfolioURL }}/tiantian/import" method="POST">
+            <div class="input-field">
+                <textarea id="tiantian_holding_text" name="holding_text" class="materialize-textarea fund-tiantian-import-textarea" required>{{ .ImportText }}</textarea>
+                <label for="tiantian_holding_text">天天基金持仓页文本</label>
+            </div>
+            <div class="fund-manual-login-actions">
+                <button type="submit" name="action" value="preview" class="btn waves-effect waves-light blue lighten-1">
+                    <i class="material-icons left">fact_check</i>识别预览
+                </button>
+                <button type="submit" name="action" value="save" class="btn waves-effect waves-light red lighten-2">
+                    <i class="material-icons left">save</i>识别并保存完整项
+                </button>
+            </div>
+        </form>
+
+        {{ if .ImportWarnings }}
+        <div class="fund-tiantian-warning-list">
+            {{ range .ImportWarnings }}
+            <p>{{ . }}</p>
+            {{ end }}
+        </div>
+        {{ end }}
+
+        {{ if .ImportPreview }}
+        <table class="striped responsive-table fund-tiantian-preview-table">
+            <thead>
+                <tr>
+                    <th>基金</th>
+                    <th>当前总值</th>
+                    <th>成本净值</th>
+                    <th>持有份额</th>
+                    <th>净值</th>
+                    <th>提示</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .ImportPreview }}
+                <tr>
+                    <td>
+                        <strong>{{ .Item.Code }}</strong>
+                        {{ if .Name }}<br>{{ .Name }}{{ end }}
+                    </td>
+                    <td>{{ if gt .Item.CurrentAmount 0.0 }}{{ printf "%.2f" .Item.CurrentAmount }}{{ else }}--{{ end }}</td>
+                    <td>{{ if gt .Item.CostNav 0.0 }}{{ printf "%.4f" .Item.CostNav }}{{ else }}--{{ end }}</td>
+                    <td>{{ if gt .Item.HoldingShares 0.0 }}{{ printf "%.2f" .Item.HoldingShares }}{{ else }}--{{ end }}</td>
+                    <td>{{ if gt .UnitNAV 0.0 }}{{ printf "%.4f" .UnitNAV }}{{ if .NAVDate }} ({{ .NAVDate }}){{ end }}{{ else }}--{{ end }}</td>
+                    <td>
+                        {{ if .Warnings }}
+                        {{ range .Warnings }}<div class="orange-text text-darken-2">{{ . }}</div>{{ end }}
+                        {{ else }}
+                        可保存
+                        {{ end }}
+                    </td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+        {{ end }}
     </div>
 </div>
-<script defer src="{{ .HostURL }}/statics/js/fund_portfolio_tiantian.js?v=tiantian-login-v1"></script>
+<script defer src="{{ .HostURL }}/statics/js/fund_portfolio_tiantian.js?v=tiantian-login-v2"></script>
 {{ template "footer" . }}

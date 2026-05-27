@@ -44,6 +44,13 @@
     if (openLink) {
       openLink.addEventListener("click", markOpened);
     }
+    var openDefaultLink = document.getElementById("tiantian-open-default-link");
+    if (openDefaultLink) {
+      openDefaultLink.addEventListener("click", markOpened);
+    }
+    if (window.M && M.updateTextFields) {
+      M.updateTextFields();
+    }
     restoreOpenedState();
   });
 })();
