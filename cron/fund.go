@@ -57,6 +57,7 @@ func SyncFund() {
 
 	// 更新4433列表
 	Update4433()
+	Update4433Recommendation()
 
 	// 更新文件
 	b, err := json.Marshal(efundlist)
@@ -107,6 +108,28 @@ func Update4433() {
 	} else if err := ioutil.WriteFile(models.Fund4433ListFilename, b, 0666); err != nil {
 		logging.Errorf(ctx, "Update4433 WriteFile error:", err)
 		promSyncError.WithLabelValues("Update4433").Inc()
+		return
+	}
+}
+
+// Update4433Recommendation 更新4433为空时展示的每日候选基金。
+func Update4433Recommendation() {
+	ctx := context.Background()
+	fundlist, source, sourceCount, err := core.RefreshFund4433Recommendations(ctx, models.FundAllList, core.DefaultFund4433RecommendationOptions())
+	if err != nil {
+		logging.Errorf(ctx, "Update4433Recommendation refresh error:%v", err)
+		promSyncError.WithLabelValues("Update4433Recommendation").Inc()
+		return
+	}
+	cache := models.Fund4433RecommendationCache{
+		UpdatedAt:   time.Now(),
+		Source:      source,
+		SourceCount: sourceCount,
+		Items:       fundlist,
+	}
+	if err := models.SaveFund4433RecommendationCache(cache); err != nil {
+		logging.Errorf(ctx, "Update4433Recommendation WriteFile error:%v", err)
+		promSyncError.WithLabelValues("Update4433Recommendation").Inc()
 		return
 	}
 }

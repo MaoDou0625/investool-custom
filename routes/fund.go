@@ -26,7 +26,6 @@ type ParamFundIndex struct {
 
 // FundIndex godoc
 func FundIndex(c *gin.Context) {
-	fundList := models.Fund4433List
 	p := ParamFundIndex{
 		PageNum:  1,
 		PageSize: 10,
@@ -44,6 +43,13 @@ func FundIndex(c *gin.Context) {
 		return
 	}
 
+	display := resolveFund4433Display(c, false)
+	fundList := display.List
+	fundTypes := models.Fund4433TypeList
+	if display.Meta.UsingRecommendation {
+		fundTypes = fundList.Types()
+	}
+
 	// 过滤
 	if p.Type != "" {
 		fundList = fundList.FilterByType(p.Type)
@@ -57,18 +63,25 @@ func FundIndex(c *gin.Context) {
 	pagi := goutils.PaginateByPageNumSize(totalCount, p.PageNum, p.PageSize)
 	result := fundList[pagi.StartIndex:pagi.EndIndex]
 	data := gin.H{
-		"Env":           viper.GetString("env"),
-		"HostURL":       viper.GetString("server.host_url"),
-		"Version":       version.Version,
-		"PageTitle":     "InvesTool | 基金",
-		"URLPath":       viper.GetString("server.host_url") + "/fund",
-		"FundList":      result,
-		"Pagination":    pagi,
-		"IndexParam":    p,
-		"UpdatedAt":     models.SyncFundTime.Format("2006-01-02 15:04:05"),
-		"AllFundCount":  len(models.FundAllList),
-		"Fund4433Count": totalCount,
-		"FundTypes":     models.Fund4433TypeList,
+		"Env":                                    viper.GetString("env"),
+		"HostURL":                                viper.GetString("server.host_url"),
+		"Version":                                version.Version,
+		"PageTitle":                              "InvesTool | 基金",
+		"URLPath":                                viper.GetString("server.host_url") + "/fund",
+		"FundList":                               result,
+		"Pagination":                             pagi,
+		"IndexParam":                             p,
+		"UpdatedAt":                              models.SyncFundTime.Format("2006-01-02 15:04:05"),
+		"AllFundCount":                           len(models.FundAllList),
+		"Fund4433Count":                          totalCount,
+		"FundTypes":                              fundTypes,
+		"Fund4433UsingRecommendation":            display.Meta.UsingRecommendation,
+		"Fund4433RecommendationRefreshing":       display.Meta.Refreshing,
+		"Fund4433RecommendationRefreshStartedAt": display.Meta.RefreshStartedAt,
+		"Fund4433RecommendationUpdatedAt":        display.Meta.UpdatedAt,
+		"Fund4433RecommendationSource":           display.Meta.Source,
+		"Fund4433RecommendationSourceCount":      display.Meta.SourceCount,
+		"Fund4433RecommendationError":            display.Meta.Error,
 	}
 	c.HTML(http.StatusOK, "fund_index.html", data)
 	return

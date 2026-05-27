@@ -30,8 +30,30 @@
         <div class="divider"></div>
         <div class="left">
             更新时间:{{ .UpdatedAt }}<br/>
+            {{ if .Fund4433UsingRecommendation }}
+            每日候选数:{{ .Fund4433Count }}<br/>
+            候选来源:{{ .Fund4433RecommendationSource }}({{ .Fund4433RecommendationSourceCount }})/本地全量缓存:{{ .AllFundCount }}
+            {{ else }}
             4433总数:{{ .Fund4433Count }}/筛选总数:{{ .AllFundCount }}
+            {{ end }}
         </div>
+        {{ if .Fund4433UsingRecommendation }}
+        <div class="card-panel amber lighten-5">
+            <b>当前显示每日候选基金</b><br/>
+            严格 4433 列表为空或未生成，下方按接近 4433、回撤、夏普、规模和基金经理稳定性生成候选，仅供参考，不构成投资建议。候选更新时间:{{ .Fund4433RecommendationUpdatedAt }}
+            {{ if .Fund4433RecommendationRefreshing }}<br/>后台正在刷新，开始时间:{{ .Fund4433RecommendationRefreshStartedAt }}{{ end }}
+            <br/><a href="{{ .HostURL }}/fund/4433/recommendation/refresh">刷新每日候选</a>
+        </div>
+        {{ else if .Fund4433RecommendationRefreshing }}
+        <div class="card-panel blue lighten-5">
+            严格 4433 列表暂无数据，正在后台刷新每日候选基金，开始时间:{{ .Fund4433RecommendationRefreshStartedAt }}。稍后刷新页面即可查看结果。
+        </div>
+        {{ else if .Fund4433RecommendationError }}
+        <div class="card-panel red lighten-5">
+            每日候选刷新失败:{{ .Fund4433RecommendationError }}<br/>
+            <a href="{{ .HostURL }}/fund/4433/recommendation/refresh">重新刷新每日候选</a>
+        </div>
+        {{ end }}
         {{ template "fundtable" . }}
         <!-- baidu ad -->
         <div class="_ncqis2o6lh"></div>

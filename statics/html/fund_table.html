@@ -30,6 +30,7 @@
             <li><label><input id="f23" type="checkbox" /><span>历史分红送配</span></label></li>
         </ul>
     </div>
+    {{ if .FundList }}
     <table id="fund4433table" class="striped centered">
         <thead>
             <tr>
@@ -303,4 +304,9 @@
             <a href="{{ $urlpath }}?page_num={{ .Pagination.PagesCount }}&page_size={{ .IndexParam.PageSize }}&sort={{ .IndexParam.Sort }}&type={{ .IndexParam.Type }}{{ if eq $urlpath "/fund/filter" }}&year_1_rank_ratio={{ $filterparam.Year1RankRatio }}&this_year_235_rank_ratio={{ $filterparam.ThisYear235RankRatio }}&month_6_rank_ratio={{ $filterparam.Month6RankRatio }}&month_3_rank_ratio={{ $filterparam.Month3RankRatio }}&min_scale={{ $filterparam.MinScale }}&max_scale={{ $filterparam.MaxScale }}&min_manager_years={{ $filterparam.MinManagerYears }}{{ range $filterparam.Types }}&types={{ . }}{{ end }}&max_135_avg_stddev={{ $filterparam.Max135AvgStddev }}&min_135_avg_sharp={{ $filterparam.Min135AvgSharp }}&max_135_avg_retr={{ $filterparam.Max135AvgRetr }}{{ end }}"><i class="material-icons">last_page</i></a>
         </li>
     </ul>
+    {{ else }}
+    <div class="card-panel grey lighten-4 center">
+        暂无基金数据。{{ if .Fund4433RecommendationRefreshing }}每日候选正在后台刷新，请稍后刷新页面。{{ end }}
+    </div>
+    {{ end }}
     {{ end }}

@@ -100,14 +100,58 @@ func (s Searcher) SearchFunds(ctx context.Context, fundCodes []string) (map[stri
 	if codeLen == 0 {
 		return nil, errors.New("empty fund codes")
 	}
+	return s.SearchFundsWithWorkerCount(ctx, fundCodes, viper.GetInt("app.chan_size"))
+}
+
+// SearchFundsWithWorkerCount 按基金代码搜索基金，并指定并发 worker 数。
+func (s Searcher) SearchFundsWithWorkerCount(ctx context.Context, fundCodes []string, workerCount int) (map[string]*models.Fund, error) {
+	codeLen := len(fundCodes)
+	if codeLen == 0 {
+		return nil, errors.New("empty fund codes")
+	}
 	start := time.Now()
-	workerCount := int(math.Min(float64(codeLen), viper.GetFloat64("app.chan_size")))
+	if workerCount <= 0 {
+		workerCount = 1
+	}
+	workerCount = int(math.Min(float64(codeLen), float64(workerCount)))
 	logging.Infof(ctx, "SearchFunds request start... workerCount=%d", workerCount)
 
-	reqChan := make(chan string, workerCount)
+	reqChan := make(chan string)
 	result := map[string]*models.Fund{}
 	var wg sync.WaitGroup
 	var mu sync.Mutex
+
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for code := range reqChan {
+				fundresp := &eastmoney.RespFundInfo{}
+				err := retry.Do(
+					func() error {
+						var err error
+						fundresp, err = datacenter.EastMoney.QueryFundInfo(ctx, code)
+						return err
+					},
+					retry.OnRetry(func(n uint, err error) {
+						logging.Debugf(ctx, "retry#%d: code:%v %v", n, code, err)
+					}),
+					retry.Attempts(3),
+					retry.Delay(500*time.Millisecond),
+				)
+				if err != nil {
+					logging.Errorf(ctx, "SearchFunds QueryFundInfo code:%v err:%v", code, err)
+					continue
+				}
+				fund := models.NewFund(ctx, fundresp)
+				mu.Lock()
+				result[fund.Code] = fund
+				mu.Unlock()
+			}
+		}()
+	}
+
 	for _, code := range fundCodes {
 		if strings.TrimSpace(code) == "" {
 			continue
@@ -120,37 +164,9 @@ func (s Searcher) SearchFunds(ctx context.Context, fundCodes []string) (map[stri
 		if !matched {
 			continue
 		}
-		wg.Add(1)
 		reqChan <- code
-		go func() {
-			defer func() {
-				wg.Done()
-			}()
-
-			code := <-reqChan
-			fundresp := &eastmoney.RespFundInfo{}
-			err := retry.Do(
-				func() error {
-					var err error
-					fundresp, err = datacenter.EastMoney.QueryFundInfo(ctx, code)
-					return err
-				},
-				retry.OnRetry(func(n uint, err error) {
-					logging.Debugf(ctx, "retry#%d: code:%v %v", n, code, err)
-				}),
-				retry.Attempts(3),
-				retry.Delay(500*time.Millisecond),
-			)
-			if err != nil {
-				logging.Errorf(ctx, "SearchFunds QueryFundInfo code:%v err:%v", code, err)
-				return
-			}
-			fund := models.NewFund(ctx, fundresp)
-			mu.Lock()
-			result[fund.Code] = fund
-			mu.Unlock()
-		}()
 	}
+	close(reqChan)
 	wg.Wait()
 	logging.Infof(ctx, "SearchFunds request end. latency:%+v", time.Now().Sub(start))
 	return result, nil

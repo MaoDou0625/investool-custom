@@ -12,6 +12,8 @@ func Routes(app *gin.Engine) {
 	app.POST("/checker", StockChecker)
 	app.GET("/fund", FundIndex)
 	app.GET("/fund/filter", FundFilter)
+	app.GET("/fund/4433/recommendation/refresh", Fund4433RecommendationRefresh)
+	app.GET("/fund/4433/recommendation/status", Fund4433RecommendationStatus)
 	app.POST("/fund/check", FundCheck)
 	app.GET("/fund/portfolio", FundPortfolioPage)
 	app.GET("/fund/portfolio/tiantian", FundPortfolioTianTianLogin)

@@ -23,6 +23,14 @@ var (
 	FundAllList FundList
 	// Fund4433List 满足4433法则的基金列表
 	Fund4433List FundList
+	// Fund4433RecommendationList 4433为空时的每日候选基金列表
+	Fund4433RecommendationList FundList
+	// Fund4433RecommendationUpdatedAt 4433每日候选更新时间
+	Fund4433RecommendationUpdatedAt time.Time
+	// Fund4433RecommendationSource 4433每日候选来源
+	Fund4433RecommendationSource string
+	// Fund4433RecommendationSourceCount 4433每日候选源数据数量
+	Fund4433RecommendationSourceCount int
 	// FundManagers 基金经理列表
 	FundManagers eastmoney.FundManagerInfoList
 	// SyncFundTime 基金数据同步时间
@@ -33,6 +41,8 @@ var (
 	FundAllListFilename = "./fund_all_list.json"
 	// Fund4433ListFilename 4433基金列表数据文件
 	Fund4433ListFilename = "./fund_4433_list.json"
+	// Fund4433RecommendationFilename 4433每日候选基金列表数据文件
+	Fund4433RecommendationFilename = "./fund_4433_recommendation.json"
 	// IndustryListFilename 行业列表数据文件
 	IndustryListFilename = "./industry_list.json"
 	// FundTypeListFilename 基金类型数据文件
@@ -52,6 +62,9 @@ func InitGlobalVars() {
 		logging.Error(nil, "init models global vars error:"+err.Error())
 	}
 	if err := InitFund4433List(); err != nil {
+		logging.Error(nil, "init models global vars error:"+err.Error())
+	}
+	if err := InitFund4433RecommendationList(); err != nil {
 		logging.Error(nil, "init models global vars error:"+err.Error())
 	}
 	if err := InitFundTypeList(); err != nil {
