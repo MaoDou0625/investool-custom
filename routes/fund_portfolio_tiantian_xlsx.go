@@ -74,7 +74,7 @@ func previewTianTianXLSXImportDrafts(
 	result.Title = "天天基金 Excel 识别结果"
 	result.Details = append([]string{
 		fmt.Sprintf("文件 %s 识别到 %d 只基金，当前还没有写入本地持仓文件。", filename, len(drafts)),
-		"金额会作为当前总值；最新净值会用于估算份额；只有在持仓收益可用时才反推成本净值。",
+		"金额会作为当前总值；只有在持仓收益已确认时，才会结合最新净值估算份额并反推成本净值。",
 	}, result.Details[1:]...)
 	return result
 }

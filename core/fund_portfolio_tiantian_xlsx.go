@@ -135,24 +135,51 @@ func parseTianTianXLSXRow(row []string, columns tiantianXLSXColumnMap, code stri
 	}
 	profitAmount, hasProfitAmount := parseTianTianXLSXNumber(cellAt(row, columns.Profit), 2)
 	profitRatio, hasProfitRatio := parseTianTianXLSXNumber(cellAt(row, columns.ProfitRatio), 4)
+	hasConfirmedPosition := hasProfitAmount || hasProfitRatio
 
-	if hasCurrentAmount && hasUnitNAV && unitNAV > 0 {
+	if hasCurrentAmount && hasUnitNAV && unitNAV > 0 && hasConfirmedPosition {
 		draft.Item.HoldingShares = currentAmount / unitNAV
 		draft.Warnings = append(draft.Warnings, "持有份额由金额 ÷ 最新净值估算")
 	}
-	if hasCurrentAmount && hasProfitAmount && draft.Item.HoldingShares > 0 {
-		costAmount := currentAmount - profitAmount
-		if costAmount > 0 {
+	if hasCurrentAmount && draft.Item.HoldingShares > 0 {
+		costAmount, hasCostAmount := estimateTianTianXLSXCostAmount(currentAmount, profitAmount, hasProfitAmount, profitRatio, hasProfitRatio)
+		if hasCostAmount && costAmount > 0 {
 			draft.Item.CostNav = costAmount / draft.Item.HoldingShares
 			draft.Warnings = append(draft.Warnings, "成本净值由金额、持仓收益和估算份额反推")
 		}
 	}
 	if draft.Item.CostNav <= 0 {
-		draft.Warnings = append(draft.Warnings, "Excel 未提供可反推成本净值的持仓收益，收益率暂无法精确计算")
+		if !hasConfirmedPosition {
+			draft.Warnings = append(draft.Warnings, "该行持仓收益尚未确认，按待确认买入处理：暂不估算份额和成本净值")
+		} else {
+			draft.Warnings = append(draft.Warnings, "Excel 未提供足够字段反推成本净值，收益率暂无法精确计算")
+		}
 	}
 
 	draft.Item.Note = buildTianTianXLSXNote(row, columns, draft, profitAmount, hasProfitAmount, profitRatio, hasProfitRatio)
 	return draft
+}
+
+func estimateTianTianXLSXCostAmount(
+	currentAmount float64,
+	profitAmount float64,
+	hasProfitAmount bool,
+	profitRatio float64,
+	hasProfitRatio bool,
+) (float64, bool) {
+	if hasProfitAmount {
+		costAmount := currentAmount - profitAmount
+		if costAmount > 0 {
+			return costAmount, true
+		}
+	}
+	if hasProfitRatio && profitRatio > -100 {
+		costAmount := currentAmount / (1 + profitRatio/100)
+		if costAmount > 0 {
+			return costAmount, true
+		}
+	}
+	return 0, false
 }
 
 func parseTianTianXLSXNumber(value string, maxDecimals int) (float64, bool) {

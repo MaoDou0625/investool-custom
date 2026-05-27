@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/360EntSecGroup-Skylar/excelize/v2"
@@ -42,8 +43,10 @@ func TestParseFundPortfolioTianTianXLSX(t *testing.T) {
 	second := report.Drafts[1]
 	require.Equal(t, "001407", second.Item.Code)
 	require.InDelta(t, 20, second.Item.CurrentAmount, 0.001)
+	require.Zero(t, second.Item.HoldingShares)
 	require.Zero(t, second.Item.CostNav)
 	require.NotEmpty(t, second.Warnings)
+	require.Contains(t, strings.Join(second.Warnings, " "), "待确认买入")
 }
 
 func TestParseFundPortfolioTianTianXLSXRequiresHoldingRows(t *testing.T) {
