@@ -17,6 +17,7 @@ func Routes(app *gin.Engine) {
 	app.GET("/fund/portfolio/tiantian", FundPortfolioTianTianLogin)
 	app.GET("/fund/portfolio/tiantian/open", FundPortfolioTianTianOpenDefaultBrowser)
 	app.POST("/fund/portfolio/tiantian/import", FundPortfolioTianTianImportText)
+	app.POST("/fund/portfolio/tiantian/import/xlsx", FundPortfolioTianTianImportXLSX)
 	app.GET("/fund/portfolio/tiantian/continue", FundPortfolioTianTianContinue)
 	app.POST("/fund/portfolio/correlation/refresh", FundPortfolioCorrelationRefresh)
 	app.POST("/fund/portfolio/recognize", FundPortfolioRecognizeScreenshot)

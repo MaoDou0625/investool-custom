@@ -409,6 +409,20 @@ main.container:has(#fund_portfolio_tiantian_content) {
   margin-top: 0;
 }
 
+.fund-tiantian-xlsx-import,
+.fund-tiantian-text-import {
+  border-top: 1px solid #eef2f6;
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.fund-tiantian-xlsx-import h5,
+.fund-tiantian-text-import h5 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
 .fund-tiantian-import-textarea {
   min-height: 180px !important;
   font-family: Consolas, "Courier New", monospace;
