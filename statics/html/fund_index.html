@@ -28,30 +28,70 @@
         <h2 class="center"><span onclick="$('#desc_4433').tapTarget('open')">4433<i class="tiny material-icons">help_outline</i></span>基金列表</h2>
         <p class="tiny center">以下所有数据与信息仅供参考，不构成投资建议</p>
         <div class="divider"></div>
-        <div class="left">
-            更新时间:{{ .UpdatedAt }}<br/>
-            {{ if .Fund4433UsingRecommendation }}
-            每日候选数:{{ .Fund4433Count }}<br/>
-            候选来源:{{ .Fund4433RecommendationSource }}({{ .Fund4433RecommendationSourceCount }})/本地全量缓存:{{ .AllFundCount }}
-            {{ else }}
-            4433总数:{{ .Fund4433Count }}/筛选总数:{{ .AllFundCount }}
-            {{ end }}
-        </div>
         {{ if .Fund4433UsingRecommendation }}
-        <div class="card-panel amber lighten-5">
-            <b>当前显示每日候选基金</b><br/>
-            严格 4433 列表为空或未生成，下方按接近 4433、回撤、夏普、规模和基金经理稳定性生成候选，仅供参考，不构成投资建议。候选更新时间:{{ .Fund4433RecommendationUpdatedAt }}
-            {{ if .Fund4433RecommendationRefreshing }}<br/>后台正在刷新，开始时间:{{ .Fund4433RecommendationRefreshStartedAt }}{{ end }}
-            <br/><a href="{{ .HostURL }}/fund/4433/recommendation/refresh">刷新每日候选</a>
+        <div class="fund4433-status fund4433-status-recommendation">
+            <div class="fund4433-status-header">
+                <div>
+                    <span>当前显示</span>
+                    <strong>每日候选基金</strong>
+                    <p>严格 4433 列表暂未生成，系统按接近 4433、回撤、夏普、规模和经理稳定性排序。</p>
+                </div>
+                <a class="btn-small waves-effect waves-light red lighten-2" href="{{ .HostURL }}/fund/4433/recommendation/refresh">
+                    <i class="material-icons left">refresh</i>刷新候选
+                </a>
+            </div>
+            <div class="fund4433-status-metrics">
+                <div>
+                    <span>候选数量</span>
+                    <strong>{{ .Fund4433Count }}</strong>
+                </div>
+                <div>
+                    <span>候选来源</span>
+                    <strong>{{ .Fund4433RecommendationSource }}</strong>
+                    <em>{{ .Fund4433RecommendationSourceCount }} 只</em>
+                </div>
+                <div>
+                    <span>本地全量缓存</span>
+                    <strong>{{ .AllFundCount }}</strong>
+                </div>
+                <div>
+                    <span>候选更新时间</span>
+                    <strong>{{ .Fund4433RecommendationUpdatedAt }}</strong>
+                </div>
+            </div>
+            {{ if .Fund4433RecommendationRefreshing }}
+            <p class="fund4433-status-line">后台正在刷新，开始时间:{{ .Fund4433RecommendationRefreshStartedAt }}</p>
+            {{ end }}
+            <p class="fund4433-status-note">这些候选用于避免 4433 页面空白，仅供参考，不构成投资建议。</p>
         </div>
         {{ else if .Fund4433RecommendationRefreshing }}
-        <div class="card-panel blue lighten-5">
-            严格 4433 列表暂无数据，正在后台刷新每日候选基金，开始时间:{{ .Fund4433RecommendationRefreshStartedAt }}。稍后刷新页面即可查看结果。
+        <div class="fund4433-status fund4433-status-refreshing">
+            <div class="fund4433-status-header">
+                <div>
+                    <span>正在刷新</span>
+                    <strong>每日候选基金</strong>
+                    <p>严格 4433 列表暂无数据，后台正在生成候选。开始时间:{{ .Fund4433RecommendationRefreshStartedAt }}</p>
+                </div>
+            </div>
         </div>
         {{ else if .Fund4433RecommendationError }}
-        <div class="card-panel red lighten-5">
-            每日候选刷新失败:{{ .Fund4433RecommendationError }}<br/>
-            <a href="{{ .HostURL }}/fund/4433/recommendation/refresh">重新刷新每日候选</a>
+        <div class="fund4433-status fund4433-status-error">
+            <div class="fund4433-status-header">
+                <div>
+                    <span>刷新失败</span>
+                    <strong>每日候选基金</strong>
+                    <p>{{ .Fund4433RecommendationError }}</p>
+                </div>
+                <a class="btn-small waves-effect waves-light red lighten-2" href="{{ .HostURL }}/fund/4433/recommendation/refresh">
+                    <i class="material-icons left">refresh</i>重试
+                </a>
+            </div>
+        </div>
+        {{ else }}
+        <div class="fund4433-summary">
+            <span>更新时间:{{ .UpdatedAt }}</span>
+            <span>4433总数:{{ .Fund4433Count }}</span>
+            <span>筛选总数:{{ .AllFundCount }}</span>
         </div>
         {{ end }}
         {{ template "fundtable" . }}

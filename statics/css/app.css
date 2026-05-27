@@ -34,6 +34,119 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
     display:none !important
 }
 
+.fund4433-summary {
+  align-items: center;
+  color: #607d8b;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 14px 0 16px;
+}
+
+.fund4433-summary span {
+  line-height: 1.5;
+}
+
+.fund4433-status {
+  background: #ffffff;
+  border: 1px solid #e0e7ef;
+  border-left: 4px solid #ef5350;
+  border-radius: 6px;
+  margin: 16px 0 18px;
+  padding: 14px 16px;
+}
+
+.fund4433-status-recommendation {
+  border-left-color: #fb8c00;
+}
+
+.fund4433-status-refreshing {
+  border-left-color: #1e88e5;
+}
+
+.fund4433-status-error {
+  border-left-color: #d32f2f;
+}
+
+.fund4433-status-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.fund4433-status-header span {
+  color: #78909c;
+  display: block;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.fund4433-status-header strong {
+  color: #263238;
+  display: block;
+  font-size: 18px;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.fund4433-status-header p {
+  color: #546e7a;
+  margin: 5px 0 0;
+}
+
+.fund4433-status-header .btn-small {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.fund4433-status-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.fund4433-status-metrics div {
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  border-radius: 4px;
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.fund4433-status-metrics span {
+  color: #78909c;
+  display: block;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.fund4433-status-metrics strong {
+  color: #263238;
+  display: block;
+  font-size: 15px;
+  line-height: 1.35;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
+.fund4433-status-metrics em {
+  color: #90a4ae;
+  display: block;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.fund4433-status-line,
+.fund4433-status-note {
+  color: #607d8b;
+  font-size: 13px;
+  margin: 10px 0 0;
+}
+
 body:has(#fund_portfolio_content),
 body:has(#fund_portfolio_tiantian_content),
 main.container:has(#fund_portfolio_content),
@@ -553,6 +666,19 @@ main.container:has(#fund_portfolio_tiantian_content) {
 }
 
 @media only screen and (max-width: 600px) {
+  .fund4433-status-header {
+    display: block;
+  }
+
+  .fund4433-status-header .btn-small {
+    margin-top: 12px;
+    width: 100%;
+  }
+
+  .fund4433-status-metrics {
+    grid-template-columns: 1fr;
+  }
+
   .fund-portfolio-page {
     overflow-x: hidden;
     padding: 0 12px 24px;

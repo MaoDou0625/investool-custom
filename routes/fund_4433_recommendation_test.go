@@ -63,7 +63,8 @@ func TestFundIndexUsesRecommendationWhen4433Empty(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, recorder.Code)
 	body := recorder.Body.String()
-	require.Contains(t, body, "当前显示每日候选基金")
+	require.Contains(t, body, "当前显示")
+	require.Contains(t, body, "每日候选基金")
 	require.Contains(t, body, "测试每日候选基金")
 	require.Contains(t, body, "测试缓存")
 }
