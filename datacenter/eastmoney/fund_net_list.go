@@ -118,6 +118,9 @@ func (e EastMoney) QueryAllFundList(ctx context.Context, fundType FundType) (Fun
 	// 算出总页数循环获取全量数据
 	pageCount := (totalCount + 30 - 1) / 30
 	chanSize := viper.GetInt("app.chan_size")
+	if chanSize <= 0 {
+		chanSize = 4
+	}
 	reqChan := make(chan int, chanSize)
 	var mu sync.Mutex
 	var wg sync.WaitGroup

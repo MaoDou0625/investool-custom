@@ -44,6 +44,7 @@ func FundIndex(c *gin.Context) {
 	}
 
 	display := resolveFund4433Display(c, false)
+	cacheRefresh := currentFundCacheRefreshMeta()
 	fundList := display.List
 	fundTypes := models.Fund4433TypeList
 	if display.Meta.UsingRecommendation {
@@ -82,6 +83,7 @@ func FundIndex(c *gin.Context) {
 		"Fund4433RecommendationSource":           display.Meta.Source,
 		"Fund4433RecommendationSourceCount":      display.Meta.SourceCount,
 		"Fund4433RecommendationError":            display.Meta.Error,
+		"FundCacheRefresh":                       cacheRefresh,
 	}
 	c.HTML(http.StatusOK, "fund_index.html", data)
 	return

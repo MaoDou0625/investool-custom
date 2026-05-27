@@ -147,6 +147,106 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
   margin: 10px 0 0;
 }
 
+.fund-cache-refresh {
+  background: #ffffff;
+  border: 1px solid #dbe4ee;
+  border-left: 4px solid #607d8b;
+  border-radius: 6px;
+  margin: 14px 0 18px;
+  padding: 14px 16px;
+}
+
+.fund-cache-refresh.is-refreshing {
+  border-left-color: #1e88e5;
+}
+
+.fund-cache-refresh-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.fund-cache-refresh-header span,
+.fund-cache-refresh-metrics span {
+  color: #78909c;
+  display: block;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.fund-cache-refresh-header strong {
+  color: #263238;
+  display: block;
+  font-size: 17px;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.fund-cache-refresh-header p {
+  color: #546e7a;
+  margin: 5px 0 0;
+}
+
+.fund-cache-refresh-header .btn-small {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.fund-cache-refresh-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.fund-cache-refresh-metrics div {
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  border-radius: 4px;
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.fund-cache-refresh-metrics strong {
+  color: #263238;
+  display: block;
+  font-size: 15px;
+  line-height: 1.35;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
+.fund-cache-refresh-metrics em {
+  color: #90a4ae;
+  display: block;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.fund-cache-progress-track {
+  background: #edf2f7;
+  border-radius: 999px;
+  height: 7px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.fund-cache-progress-track span {
+  background: #1e88e5;
+  display: block;
+  height: 100%;
+  transition: width 0.2s ease;
+}
+
+.fund-cache-refresh-note {
+  color: #607d8b;
+  font-size: 13px;
+  margin: 10px 0 0;
+}
+
 body:has(#fund_portfolio_content),
 body:has(#fund_portfolio_tiantian_content),
 main.container:has(#fund_portfolio_content),
@@ -676,6 +776,19 @@ main.container:has(#fund_portfolio_tiantian_content) {
   }
 
   .fund4433-status-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .fund-cache-refresh-header {
+    display: block;
+  }
+
+  .fund-cache-refresh-header .btn-small {
+    margin-top: 12px;
+    width: 100%;
+  }
+
+  .fund-cache-refresh-metrics {
     grid-template-columns: 1fr;
   }
 

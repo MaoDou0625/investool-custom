@@ -94,6 +94,65 @@
             <span>筛选总数:{{ .AllFundCount }}</span>
         </div>
         {{ end }}
+        <div id="fund-cache-refresh-status"
+             class="fund-cache-refresh {{ if .FundCacheRefresh.Refreshing }}is-refreshing{{ end }}"
+             data-status-url="{{ .HostURL }}/fund/cache/status"
+             data-page-url="{{ .HostURL }}/fund#4433">
+            <div class="fund-cache-refresh-header">
+                <div>
+                    <span>本地全量缓存</span>
+                    {{ if .FundCacheRefresh.Refreshing }}
+                    <strong id="fund-cache-refresh-title">{{ .FundCacheRefresh.StageText }}</strong>
+                    {{ else if .FundCacheRefresh.Error }}
+                    <strong id="fund-cache-refresh-title">刷新失败</strong>
+                    {{ else }}
+                    <strong id="fund-cache-refresh-title">{{ .AllFundCount }} 只基金</strong>
+                    {{ end }}
+                    <p id="fund-cache-refresh-summary">
+                        本地缓存用于生成严格 4433、每日候选和后续基金分析；刷新会在后台运行，页面会显示进度。
+                    </p>
+                </div>
+                <a id="fund-cache-refresh-link" class="btn-small waves-effect waves-light blue-grey" href="{{ .HostURL }}/fund/cache/refresh">
+                    <i class="material-icons left">sync</i>刷新本地缓存
+                </a>
+            </div>
+            <div class="fund-cache-refresh-metrics">
+                <div>
+                    <span>基金详情</span>
+                    <strong id="fund-cache-refresh-count">{{ .FundCacheRefresh.FundCount }}</strong>
+                    <em>当前页面缓存 {{ .AllFundCount }} 只</em>
+                </div>
+                <div>
+                    <span>严格 4433</span>
+                    <strong id="fund-cache-refresh-4433">{{ .FundCacheRefresh.Fund4433Count }}</strong>
+                    <em>缓存完成后自动生成</em>
+                </div>
+                <div>
+                    <span>每日候选</span>
+                    <strong id="fund-cache-refresh-recommendation">{{ .FundCacheRefresh.RecommendationCount }}</strong>
+                    <em>供 4433 为空时展示</em>
+                </div>
+                <div>
+                    <span>状态</span>
+                    <strong id="fund-cache-refresh-stage">{{ .FundCacheRefresh.StageText }}</strong>
+                    <em id="fund-cache-refresh-time">更新时间:{{ .FundCacheRefresh.UpdatedAt }}</em>
+                </div>
+            </div>
+            <div class="fund-cache-progress-track" aria-label="本地缓存刷新进度">
+                <span id="fund-cache-progress-bar" style="width: {{ .FundCacheRefresh.Percent }}%;"></span>
+            </div>
+            <p id="fund-cache-progress-detail" class="fund-cache-refresh-note">
+                {{ if .FundCacheRefresh.Refreshing }}
+                已处理 {{ .FundCacheRefresh.Processed }}/{{ .FundCacheRefresh.Total }}，成功 {{ .FundCacheRefresh.Succeeded }}，失败 {{ .FundCacheRefresh.Failed }}。
+                {{ else if .FundCacheRefresh.Error }}
+                {{ .FundCacheRefresh.Error }}
+                {{ else if ne .FundCacheRefresh.FinishedAt "--" }}
+                上次刷新完成:{{ .FundCacheRefresh.FinishedAt }}，缓存 {{ .FundCacheRefresh.FundCount }} 只基金。
+                {{ else }}
+                当前本地全量缓存为 {{ .AllFundCount }} 只；如果为 0，建议先刷新一次。
+                {{ end }}
+            </p>
+        </div>
         {{ template "fundtable" . }}
         <!-- baidu ad -->
         <div class="_ncqis2o6lh"></div>

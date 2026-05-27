@@ -103,8 +103,16 @@ func (s Searcher) SearchFunds(ctx context.Context, fundCodes []string) (map[stri
 	return s.SearchFundsWithWorkerCount(ctx, fundCodes, viper.GetInt("app.chan_size"))
 }
 
+// SearchFundsProgressFunc reports one fund detail query result.
+type SearchFundsProgressFunc func(code string, success bool, err error)
+
 // SearchFundsWithWorkerCount 按基金代码搜索基金，并指定并发 worker 数。
 func (s Searcher) SearchFundsWithWorkerCount(ctx context.Context, fundCodes []string, workerCount int) (map[string]*models.Fund, error) {
+	return s.SearchFundsWithWorkerCountAndProgress(ctx, fundCodes, workerCount, nil)
+}
+
+// SearchFundsWithWorkerCountAndProgress 按基金代码搜索基金，并汇报每个代码的查询结果。
+func (s Searcher) SearchFundsWithWorkerCountAndProgress(ctx context.Context, fundCodes []string, workerCount int, progress SearchFundsProgressFunc) (map[string]*models.Fund, error) {
 	codeLen := len(fundCodes)
 	if codeLen == 0 {
 		return nil, errors.New("empty fund codes")
@@ -142,12 +150,18 @@ func (s Searcher) SearchFundsWithWorkerCount(ctx context.Context, fundCodes []st
 				)
 				if err != nil {
 					logging.Errorf(ctx, "SearchFunds QueryFundInfo code:%v err:%v", code, err)
+					if progress != nil {
+						progress(code, false, err)
+					}
 					continue
 				}
 				fund := models.NewFund(ctx, fundresp)
 				mu.Lock()
 				result[fund.Code] = fund
 				mu.Unlock()
+				if progress != nil {
+					progress(code, true, nil)
+				}
 			}
 		}()
 	}
