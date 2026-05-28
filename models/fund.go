@@ -686,6 +686,30 @@ func (f FundList) FilterByType(t string) (results FundList) {
 	return
 }
 
+// FilterByTypes 按 type 字段列表过滤
+func (f FundList) FilterByTypes(types []string) (results FundList) {
+	if len(types) == 0 {
+		return f
+	}
+	allowed := map[string]struct{}{}
+	for _, rawType := range types {
+		t := strings.TrimSpace(rawType)
+		if t == "" {
+			continue
+		}
+		allowed[t] = struct{}{}
+	}
+	if len(allowed) == 0 {
+		return f
+	}
+	for _, i := range f {
+		if _, exists := allowed[i.Type]; exists {
+			results = append(results, i)
+		}
+	}
+	return
+}
+
 // Types 返回基金列表中包含的全部基金类型
 func (f FundList) Types() (types []string) {
 	m := map[string]struct{}{}

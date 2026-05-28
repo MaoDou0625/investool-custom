@@ -3,7 +3,11 @@
 package routes
 
 import (
+	"fmt"
+	"html/template"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/axiaoxin-com/goutils"
@@ -18,10 +22,71 @@ import (
 
 // ParamFundIndex FundIndex 请求参数
 type ParamFundIndex struct {
-	PageNum  int    `json:"page_num"  form:"page_num"`
-	PageSize int    `json:"page_size" form:"page_size"`
-	Sort     int    `json:"sort"      form:"sort"`
-	Type     string `json:"type"      form:"type"`
+	PageNum  int      `json:"page_num"  form:"page_num"`
+	PageSize int      `json:"page_size" form:"page_size"`
+	Sort     int      `json:"sort"      form:"sort"`
+	Type     string   `json:"type"      form:"type"`
+	Types    []string `json:"types"`
+}
+
+// ApplyTypeSelection normalizes repeated type query params for table display filtering.
+func (p *ParamFundIndex) ApplyTypeSelection(rawTypes []string) {
+	seen := map[string]struct{}{}
+	p.Types = nil
+	p.Type = ""
+	for _, rawType := range rawTypes {
+		t := strings.TrimSpace(rawType)
+		if t == "" || t == "all" || t == "__all__" {
+			continue
+		}
+		if _, exists := seen[t]; exists {
+			continue
+		}
+		seen[t] = struct{}{}
+		p.Types = append(p.Types, t)
+	}
+	if len(p.Types) > 0 {
+		p.Type = p.Types[0]
+	}
+}
+
+// HasTypeFilter reports whether the table display is filtered by fund type.
+func (p ParamFundIndex) HasTypeFilter() bool {
+	return len(p.Types) > 0
+}
+
+// HasType reports whether the type is selected in the table display filter.
+func (p ParamFundIndex) HasType(t string) bool {
+	for _, selectedType := range p.Types {
+		if selectedType == t {
+			return true
+		}
+	}
+	return false
+}
+
+// TypeQuery returns encoded repeated type params for table links.
+func (p ParamFundIndex) TypeQuery() template.URL {
+	if len(p.Types) == 0 {
+		return ""
+	}
+	var query strings.Builder
+	for _, t := range p.Types {
+		query.WriteString("&type=")
+		query.WriteString(url.QueryEscape(t))
+	}
+	return template.URL(query.String())
+}
+
+// TypeFilterLabel returns a compact label for the table type filter trigger.
+func (p ParamFundIndex) TypeFilterLabel() string {
+	if len(p.Types) == 0 {
+		return "全部类型"
+	}
+	if len(p.Types) == 1 {
+		return p.Types[0]
+	}
+	return fmt.Sprintf("已选%d类", len(p.Types))
 }
 
 // FundIndex godoc
@@ -42,6 +107,7 @@ func FundIndex(c *gin.Context) {
 		c.HTML(http.StatusOK, "fund_index.html", data)
 		return
 	}
+	p.ApplyTypeSelection(c.QueryArray("type"))
 
 	display := resolveFund4433Display(c, false)
 	cacheRefresh := currentFundCacheRefreshMeta()
@@ -52,8 +118,8 @@ func FundIndex(c *gin.Context) {
 	}
 
 	// 过滤
-	if p.Type != "" {
-		fundList = fundList.FilterByType(p.Type)
+	if p.HasTypeFilter() {
+		fundList = fundList.FilterByTypes(p.Types)
 	}
 	// 排序
 	if p.Sort > 0 {
@@ -125,11 +191,12 @@ func FundFilter(c *gin.Context) {
 		c.HTML(http.StatusOK, "fund_filter.html", data)
 		return
 	}
+	p.ParamFundIndex.ApplyTypeSelection(c.QueryArray("type"))
 	fundList := models.FundAllList.Filter(c, p.ParamFundListFilter)
 	fundTypes := fundList.Types()
 	// 过滤
-	if p.ParamFundIndex.Type != "" {
-		fundList = fundList.FilterByType(p.ParamFundIndex.Type)
+	if p.ParamFundIndex.HasTypeFilter() {
+		fundList = fundList.FilterByTypes(p.ParamFundIndex.Types)
 	}
 	// 排序
 	if p.ParamFundIndex.Sort > 0 {

@@ -110,6 +110,52 @@ func TestFundIndexShowsCacheRefreshEntry(t *testing.T) {
 	require.Contains(t, body, `/fund/cache/status`)
 }
 
+func TestFundIndexSupportsMultipleTypeFilters(t *testing.T) {
+	old4433List := models.Fund4433List
+	old4433Types := models.Fund4433TypeList
+	oldRecommendationList := models.Fund4433RecommendationList
+	defer func() {
+		models.Fund4433List = old4433List
+		models.Fund4433TypeList = old4433Types
+		models.Fund4433RecommendationList = oldRecommendationList
+	}()
+
+	mixFund := buildFundIndexRecommendationFund("000001", "multi type mix fund")
+	mixFund.Type = "mix"
+	stockFund := buildFundIndexRecommendationFund("000002", "multi type stock fund")
+	stockFund.Type = "stock"
+	bondFund := buildFundIndexRecommendationFund("000003", "multi type bond fund")
+	bondFund.Type = "bond"
+	models.Fund4433List = models.FundList{mixFund, stockFund, bondFund}
+	models.Fund4433TypeList = []string{"mix", "stock", "bond"}
+	models.Fund4433RecommendationList = nil
+
+	viper.Set("server.mode", "release")
+	viper.Set("server.host_url", "")
+	viper.Set("statics.tmpl_path", "html/*")
+	viper.Set("statics.url", "/statics")
+	defer viper.Reset()
+
+	app := webserver.NewGinEngine()
+	Routes(app)
+
+	recorder := httptest.NewRecorder()
+	req, err := http.NewRequest(http.MethodGet, "/fund?type=mix&type=stock", nil)
+	require.NoError(t, err)
+	app.ServeHTTP(recorder, req)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	body := recorder.Body.String()
+	require.Contains(t, body, `id="fund-type-filter-form"`)
+	require.Contains(t, body, `id="fund-type-all"`)
+	require.Contains(t, body, `value="mix" checked`)
+	require.Contains(t, body, `value="stock" checked`)
+	require.Contains(t, body, `sort=0&amp;type=mix&amp;type=stock`)
+	require.Contains(t, body, "multi type mix fund")
+	require.Contains(t, body, "multi type stock fund")
+	require.NotContains(t, body, "multi type bond fund")
+}
+
 func TestFundCacheRefreshStatusUsesCurrentCacheWhenIdle(t *testing.T) {
 	oldAllList := models.FundAllList
 	old4433List := models.Fund4433List

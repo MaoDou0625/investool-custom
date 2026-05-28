@@ -34,6 +34,37 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
     display:none !important
 }
 
+.fund-type-filter-label {
+  color: #607d8b;
+  display: block;
+  font-size: 12px;
+  font-weight: normal;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.fund-type-filter-dropdown {
+  min-width: 230px;
+  padding: 10px 12px;
+}
+
+.fund-type-filter-dropdown form {
+  margin: 0;
+}
+
+.fund-type-filter-dropdown p {
+  margin: 8px 0;
+  text-align: left;
+}
+
+.fund-type-filter-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
 .fund4433-summary {
   align-items: center;
   color: #607d8b;
