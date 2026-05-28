@@ -2,47 +2,68 @@ param(
     [string]$RepoPath = (Split-Path -Parent $PSScriptRoot),
     [string]$ShortcutName = "InvesTool Custom.lnk",
     [string]$Url = "http://127.0.0.1:4869/fund",
-    [string]$TaskName = "InvesTool Custom App",
-    [switch]$DirectPowerShellShortcut
+    [string]$PortableGo = "D:\Code\tools\go1.20.14\bin\go.exe",
+    [switch]$NoBuild
 )
 
 $ErrorActionPreference = "Stop"
 
-$RepoPath = (Resolve-Path -LiteralPath $RepoPath).Path
-$launcherPath = Join-Path $RepoPath "scripts\launch_investool_app.ps1"
-if (!(Test-Path -LiteralPath $launcherPath)) {
-    throw "Launcher script not found: $launcherPath"
+function Resolve-Go {
+    param([string]$PortableGoPath)
+
+    $goCommand = Get-Command go -ErrorAction SilentlyContinue
+    if ($goCommand) {
+        return $goCommand.Source
+    }
+    if (Test-Path -LiteralPath $PortableGoPath) {
+        return (Resolve-Path -LiteralPath $PortableGoPath).Path
+    }
+    throw "Go executable not found in PATH or at $PortableGoPath"
 }
 
+$RepoPath = (Resolve-Path -LiteralPath $RepoPath).Path
 $desktopPath = [Environment]::GetFolderPath("Desktop")
 if ([string]::IsNullOrWhiteSpace($desktopPath)) {
     throw "Desktop path was not found."
 }
 
 $shortcutPath = Join-Path $desktopPath $ShortcutName
-$powershellPath = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
-$schtasksPath = Join-Path $env:SystemRoot "System32\schtasks.exe"
+$serverExePath = Join-Path $RepoPath "bin\investool-custom.exe"
+$launcherExePath = Join-Path $RepoPath "bin\investool-app-launcher.exe"
 $iconPath = Join-Path $RepoPath "statics\favicon.ico"
 if (!(Test-Path -LiteralPath $iconPath)) {
-    $iconPath = Join-Path $RepoPath "bin\investool-custom.exe"
+    $iconPath = $launcherExePath
 }
 
-if (!$DirectPowerShellShortcut) {
-    $taskAction = New-ScheduledTaskAction -Execute $powershellPath -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launcherPath`" -Url `"$Url`""
-    $taskPrincipal = New-ScheduledTaskPrincipal -UserId ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) -LogonType Interactive -RunLevel Limited
-    $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 12)
-    Register-ScheduledTask -TaskName $TaskName -Action $taskAction -Principal $taskPrincipal -Settings $taskSettings -Force | Out-Null
+$oldTaskName = "InvesTool Custom App"
+$oldTask = Get-ScheduledTask -TaskName $oldTaskName -ErrorAction SilentlyContinue
+if ($oldTask) {
+    Unregister-ScheduledTask -TaskName $oldTaskName -Confirm:$false
+}
+
+if (!$NoBuild) {
+    $go = Resolve-Go -PortableGoPath $PortableGo
+    $binDir = Split-Path -Parent $serverExePath
+    if (!(Test-Path -LiteralPath $binDir)) {
+        New-Item -ItemType Directory -Path $binDir | Out-Null
+    }
+    Push-Location -LiteralPath $RepoPath
+    try {
+        & $go build -o $serverExePath .
+        & $go build -ldflags "-H=windowsgui" -o $launcherExePath .\tools\investool-app-launcher
+    } finally {
+        Pop-Location
+    }
+}
+
+if (!(Test-Path -LiteralPath $launcherExePath)) {
+    throw "Launcher executable not found: $launcherExePath"
 }
 
 $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($shortcutPath)
-if ($DirectPowerShellShortcut) {
-    $shortcut.TargetPath = $powershellPath
-    $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launcherPath`" -Url `"$Url`""
-} else {
-    $shortcut.TargetPath = $schtasksPath
-    $shortcut.Arguments = "/Run /TN `"$TaskName`""
-}
+$shortcut.TargetPath = $launcherExePath
+$shortcut.Arguments = "-repo `"$RepoPath`" -url `"$Url`""
 $shortcut.WorkingDirectory = $RepoPath
 $shortcut.Description = "Start InvesTool Custom as a desktop app."
 if (Test-Path -LiteralPath $iconPath) {
