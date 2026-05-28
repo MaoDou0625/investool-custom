@@ -16,6 +16,8 @@ func Routes(app *gin.Engine) {
 	app.GET("/fund/cache/status", FundCacheRefreshStatus)
 	app.GET("/fund/4433/recommendation/refresh", Fund4433RecommendationRefresh)
 	app.GET("/fund/4433/recommendation/status", Fund4433RecommendationStatus)
+	app.POST("/launcher/session/heartbeat", LauncherSessionHeartbeat)
+	app.GET("/launcher/session/status", LauncherSessionStatus)
 	app.POST("/fund/check", FundCheck)
 	app.GET("/fund/portfolio", FundPortfolioPage)
 	app.GET("/fund/portfolio/tiantian", FundPortfolioTianTianLogin)

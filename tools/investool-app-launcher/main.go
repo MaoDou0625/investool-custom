@@ -3,10 +3,14 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,6 +25,10 @@ const (
 	defaultPort        = 4869
 )
 
+type launcherSessionStatus struct {
+	Alive bool `json:"alive"`
+}
+
 func main() {
 	if err := run(); err != nil {
 		_ = appendLog(defaultLogPath(mustWorkingDir()), "launcher error: "+err.Error())
@@ -30,8 +38,8 @@ func main() {
 
 func run() error {
 	repoPath := flag.String("repo", "", "investool repository path")
-	url := flag.String("url", defaultURL, "URL to open")
-	browserPath := flag.String("browser", "", "optional browser executable path")
+	targetURL := flag.String("url", defaultURL, "URL to open")
+	browserPath := flag.String("browser", "", "optional browser executable path; leave empty to use the Windows default browser")
 	bindAddress := flag.String("bind", defaultBindAddress, "local bind address")
 	port := flag.Int("port", defaultPort, "local server port")
 	flag.Parse()
@@ -52,8 +60,8 @@ func run() error {
 
 	var serverCmd *exec.Cmd
 	startedServer := false
-	if isPortOpen(*bindAddress, *port) {
-		if err := appendLog(logPath, fmt.Sprintf("port %d is already listening; reusing existing server", *port)); err != nil {
+	if err := waitForHTTPReady(*targetURL, 2*time.Second); err == nil {
+		if err := appendLog(logPath, "server already ready; reusing existing server"); err != nil {
 			return err
 		}
 	} else {
@@ -62,52 +70,44 @@ func run() error {
 			return err
 		}
 		startedServer = true
-		if err := waitForPort(*bindAddress, *port, 30*time.Second); err != nil {
+		if err := waitForHTTPReady(*targetURL, 60*time.Second); err != nil {
 			stopProcess(serverCmd)
 			return err
 		}
 	}
 
-	browserExe, err := resolveBrowserPath(*browserPath)
+	sessionID, err := newSessionID()
 	if err != nil {
-		if startedServer {
-			stopProcess(serverCmd)
-		}
+		stopStartedServer(startedServer, serverCmd)
 		return err
 	}
-	profileDir := filepath.Join(os.Getenv("LOCALAPPDATA"), "InvesToolCustom", "AppBrowserProfile")
-	if err := os.MkdirAll(profileDir, 0755); err != nil {
-		if startedServer {
-			stopProcess(serverCmd)
-		}
+	launchURL, err := addQueryParam(*targetURL, "launcher_session", sessionID)
+	if err != nil {
+		stopStartedServer(startedServer, serverCmd)
+		return err
+	}
+	statusURL, err := launcherStatusURL(*bindAddress, *port, sessionID)
+	if err != nil {
+		stopStartedServer(startedServer, serverCmd)
 		return err
 	}
 
-	if err := appendLog(logPath, "starting browser app: "+browserExe); err != nil {
-		if startedServer {
-			stopProcess(serverCmd)
-		}
+	if err := appendLog(logPath, "opening browser: "+launchURL); err != nil {
+		stopStartedServer(startedServer, serverCmd)
 		return err
 	}
-	browserCmd := exec.Command(browserExe,
-		"--user-data-dir="+profileDir,
-		"--app="+*url,
-		"--no-first-run",
-		"--no-default-browser-check",
-		"--disable-background-mode",
-	)
-	browserCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	if err := browserCmd.Start(); err != nil {
-		if startedServer {
-			stopProcess(serverCmd)
-		}
+	if err := openURL(*browserPath, launchURL); err != nil {
+		stopStartedServer(startedServer, serverCmd)
 		return err
 	}
 
-	err = browserCmd.Wait()
-	if err != nil {
-		_ = appendLog(logPath, "browser process ended with: "+err.Error())
+	if err := waitForLauncherSession(statusURL, true, 45*time.Second); err != nil {
+		_ = appendLog(logPath, "browser page did not report ready: "+err.Error())
+		stopStartedServer(startedServer, serverCmd)
+		return err
 	}
+	waitForLauncherSession(statusURL, false, 0)
+
 	if startedServer {
 		_ = appendLog(logPath, "stopping owned server")
 		stopProcess(serverCmd)
@@ -152,49 +152,106 @@ func resolveBrowserPath(requested string) (string, error) {
 		}
 		return "", fmt.Errorf("browser not found: %s", requested)
 	}
-	if path, err := exec.LookPath("msedge.exe"); err == nil {
-		return path, nil
-	}
-	candidates := []string{
-		filepath.Join(os.Getenv("ProgramFiles(x86)"), "Microsoft", "Edge", "Application", "msedge.exe"),
-		filepath.Join(os.Getenv("ProgramFiles"), "Microsoft", "Edge", "Application", "msedge.exe"),
-		filepath.Join(os.Getenv("LOCALAPPDATA"), "Microsoft", "Edge", "Application", "msedge.exe"),
-		filepath.Join(os.Getenv("ProgramFiles"), "Google", "Chrome", "Application", "chrome.exe"),
-		filepath.Join(os.Getenv("ProgramFiles(x86)"), "Google", "Chrome", "Application", "chrome.exe"),
-		filepath.Join(os.Getenv("LOCALAPPDATA"), "Google", "Chrome", "Application", "chrome.exe"),
-	}
-	for _, candidate := range candidates {
-		if candidate == "" {
-			continue
-		}
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate, nil
-		}
-	}
-	if path, err := exec.LookPath("chrome.exe"); err == nil {
-		return path, nil
-	}
-	return "", errors.New("Microsoft Edge or Google Chrome was not found")
+	return "", errors.New("browser path was empty")
 }
 
-func waitForPort(address string, port int, timeout time.Duration) error {
+func openURL(browserPath string, launchURL string) error {
+	if strings.TrimSpace(browserPath) != "" {
+		browserExe, err := resolveBrowserPath(browserPath)
+		if err != nil {
+			return err
+		}
+		cmd := exec.Command(browserExe, launchURL)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		return cmd.Start()
+	}
+
+	cmd := exec.Command("rundll32.exe", "url.dll,FileProtocolHandler", launchURL)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	return cmd.Start()
+}
+
+func waitForHTTPReady(readyURL string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
+	client := &http.Client{Timeout: 2 * time.Second}
 	for time.Now().Before(deadline) {
-		if isPortOpen(address, port) {
-			return nil
+		resp, err := client.Get(readyURL)
+		if err == nil {
+			_ = resp.Body.Close()
+			if resp.StatusCode >= 200 && resp.StatusCode < 500 {
+				return nil
+			}
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	return fmt.Errorf("server did not listen on %s:%d within %s", address, port, timeout)
+	return fmt.Errorf("server did not become ready at %s within %s", readyURL, timeout)
 }
 
-func isPortOpen(address string, port int) bool {
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", address, port), 300*time.Millisecond)
-	if err != nil {
-		return false
+func waitForLauncherSession(statusURL string, wantAlive bool, timeout time.Duration) error {
+	client := &http.Client{Timeout: 2 * time.Second}
+	deadline := time.Time{}
+	if timeout > 0 {
+		deadline = time.Now().Add(timeout)
 	}
-	_ = conn.Close()
-	return true
+	for {
+		alive, err := queryLauncherSessionAlive(client, statusURL)
+		if err == nil && alive == wantAlive {
+			return nil
+		}
+		if !deadline.IsZero() && time.Now().After(deadline) {
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("launcher session did not reach alive=%v", wantAlive)
+		}
+		time.Sleep(2 * time.Second)
+	}
+}
+
+func queryLauncherSessionAlive(client *http.Client, statusURL string) (bool, error) {
+	resp, err := client.Get(statusURL)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("session status returned %d", resp.StatusCode)
+	}
+	status := launcherSessionStatus{}
+	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+		return false, err
+	}
+	return status.Alive, nil
+}
+
+func newSessionID() (string, error) {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(buf), nil
+}
+
+func addQueryParam(rawURL string, key string, value string) (string, error) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+	query := parsed.Query()
+	query.Set(key, value)
+	parsed.RawQuery = query.Encode()
+	return parsed.String(), nil
+}
+
+func launcherStatusURL(address string, port int, sessionID string) (string, error) {
+	statusURL := fmt.Sprintf("http://%s:%d/launcher/session/status", address, port)
+	return addQueryParam(statusURL, "session", sessionID)
+}
+
+func stopStartedServer(startedServer bool, cmd *exec.Cmd) {
+	if startedServer {
+		stopProcess(cmd)
+	}
 }
 
 func stopProcess(cmd *exec.Cmd) {
