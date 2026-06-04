@@ -9,6 +9,7 @@
   "headless": true,
   "timeoutMs": 60000,
   "save": true,
+  "deleteDownloadedFile": true,
   "holdingDetailUrl": "https://trade.1234567.com.cn/myAssets/hold",
   "fundAssetDetailSelectors": [
     "a.last[href*='/myAssets/hold']",

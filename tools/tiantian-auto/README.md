@@ -6,7 +6,7 @@ This tool automates the existing TianTian fund portfolio import path:
 2. Open the configured holding page.
 3. Open the fund-asset detail page and download the holding xlsx through the download icon beside the total amount.
 4. Upload the xlsx to the local InvesTool JSON import endpoint.
-5. Print a compact JSON status for Codex or scheduled jobs.
+5. Delete the downloaded xlsx after import and print a compact JSON status for Codex or scheduled jobs.
 
 The script does not store account passwords in this repository. Save the TianTian credential in Windows Credential Manager, then later runs read it into temporary process environment variables and auto-fill the login page.
 
@@ -30,3 +30,5 @@ The default local import URL is:
 ```text
 http://127.0.0.1:4869/fund/portfolio/tiantian/import/xlsx/json
 ```
+
+The downloaded xlsx is removed after import by default. Set `deleteDownloadedFile` to `false` in a local config only when you need to debug a failed export.

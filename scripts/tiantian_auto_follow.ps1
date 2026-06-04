@@ -5,6 +5,7 @@ param(
     [switch]$Preview,
     [switch]$SetCredential,
     [switch]$NoCredential,
+    [switch]$KeepDownload,
     [string]$CredentialTarget = "investool-tiantian",
     [string]$HoldingUrl = "",
     [string]$ImportUrl = "",
@@ -45,6 +46,9 @@ if ($Headed) {
 }
 if ($Preview) {
     $argsList += "--preview"
+}
+if ($KeepDownload) {
+    $argsList += "--keep-download"
 }
 if ($HoldingUrl) {
     $argsList += @("--holding-url", $HoldingUrl)

@@ -21,6 +21,7 @@ const defaults = {
   headless: true,
   timeoutMs: 60000,
   save: true,
+  deleteDownloadedFile: true,
   holdingDetailUrl: "https://trade.1234567.com.cn/myAssets/hold",
   fundAssetDetailSelectors: [
     "a.last[href*='/myAssets/hold']",
@@ -63,10 +64,23 @@ async function main() {
     }
 
     const downloadedFile = await downloadHoldingXLSX(page, config);
-    const importResult = await importHoldingXLSX(downloadedFile, config);
+    let cleanup = { enabled: false, deleted: false };
+    let importResult;
+    try {
+      importResult = await importHoldingXLSX(downloadedFile, config);
+    } catch (err) {
+      cleanup = cleanupDownloadedFile(downloadedFile, config);
+      err.downloadedFile = downloadedFile;
+      err.downloadedFileDeleted = cleanup.deleted;
+      err.downloadCleanup = cleanup;
+      throw err;
+    }
+    cleanup = cleanupDownloadedFile(downloadedFile, config);
     printStatus({
       status: "imported",
       downloadedFile,
+      downloadedFileDeleted: cleanup.deleted,
+      downloadCleanup: cleanup,
       importUrl: config.importUrl,
       import: importResult
     });
@@ -109,6 +123,9 @@ function parseArgs(argv) {
       case "--timeout-ms":
         args.timeoutMs = Number(argv[++i] || 0);
         break;
+      case "--keep-download":
+        args.deleteDownloadedFile = false;
+        break;
       default:
         throw new Error(`unknown argument: ${arg}`);
     }
@@ -136,6 +153,9 @@ function loadConfig(args) {
   }
   if (typeof args.save === "boolean") {
     config.save = args.save;
+  }
+  if (typeof args.deleteDownloadedFile === "boolean") {
+    config.deleteDownloadedFile = args.deleteDownloadedFile;
   }
   config.profileDir = path.resolve(config.profileDir);
   config.downloadDir = path.resolve(config.downloadDir);
@@ -356,6 +376,21 @@ async function importHoldingXLSX(filename, config) {
   return payload;
 }
 
+function cleanupDownloadedFile(filename, config) {
+  if (!config.deleteDownloadedFile) {
+    return { enabled: false, deleted: false };
+  }
+  try {
+    if (!filename || !fs.existsSync(filename)) {
+      return { enabled: true, deleted: false, reason: "not_found" };
+    }
+    fs.unlinkSync(filename);
+    return { enabled: true, deleted: true };
+  } catch (err) {
+    return { enabled: true, deleted: false, error: String(err.message || err) };
+  }
+}
+
 function statusError(status, message) {
   const err = new Error(message);
   err.status = status;
@@ -395,6 +430,13 @@ main().catch((err) => {
   };
   if (err.payload) {
     payload.payload = err.payload;
+  }
+  if (err.downloadedFile) {
+    payload.downloadedFile = err.downloadedFile;
+    payload.downloadedFileDeleted = !!err.downloadedFileDeleted;
+  }
+  if (err.downloadCleanup) {
+    payload.downloadCleanup = err.downloadCleanup;
   }
   printStatus(payload);
   if (payload.status === "login_required") {
