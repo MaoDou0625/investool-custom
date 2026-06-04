@@ -1,0 +1,12 @@
+{
+  "name": "investool-tiantian-auto",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "follow": "node src/follow.js"
+  },
+  "dependencies": {
+    "playwright": "^1.60.0"
+  }
+}

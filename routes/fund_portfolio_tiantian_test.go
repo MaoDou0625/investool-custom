@@ -2,6 +2,7 @@ package routes
 
 import (
 	"bytes"
+	"encoding/json"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -128,6 +129,76 @@ func TestFundPortfolioTianTianImportXLSXSave(t *testing.T) {
 	require.Contains(t, string(content), `"code": "009239"`)
 	require.Contains(t, string(content), `"current_amount": 20`)
 	require.Contains(t, string(content), `"Tiantian Excel import`)
+}
+
+func TestFundPortfolioTianTianImportXLSXJSONSave(t *testing.T) {
+	tmp, err := os.CreateTemp("", "investool-portfolio-*.json")
+	require.NoError(t, err)
+	tmpFilename := tmp.Name()
+	require.NoError(t, tmp.Close())
+	require.NoError(t, os.Remove(tmpFilename))
+	defer os.Remove(tmpFilename)
+
+	viper.Set("server.mode", "release")
+	viper.Set("server.host_url", "")
+	viper.Set("statics.tmpl_path", "html/*")
+	viper.Set("statics.url", "/statics")
+	viper.Set("fund_portfolio.filename", tmpFilename)
+	defer viper.Reset()
+
+	app := webserver.NewGinEngine()
+	Routes(app)
+
+	body, contentType := newTianTianXLSXUploadBody(t, "save")
+	recorder := httptest.NewRecorder()
+	req, err := http.NewRequest(http.MethodPost, "/fund/portfolio/tiantian/import/xlsx/json", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", contentType)
+	app.ServeHTTP(recorder, req)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	payload := fundPortfolioTianTianImportJSONResponse{}
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &payload))
+	require.True(t, payload.Saved)
+	require.False(t, payload.Failed)
+	require.Equal(t, "tiantian-holding.xlsx", payload.Filename)
+	require.Equal(t, 1, payload.DraftCount)
+	require.Equal(t, 1, payload.AddedCount)
+	require.Len(t, payload.Drafts, 1)
+	require.Equal(t, "009239", payload.Drafts[0].Code)
+	require.InDelta(t, 20, payload.Drafts[0].CurrentAmount, 0.001)
+
+	content, err := os.ReadFile(tmpFilename)
+	require.NoError(t, err)
+	require.Contains(t, string(content), `"code": "009239"`)
+}
+
+func TestFundPortfolioTianTianImportXLSXJSONSaveFailure(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	viper.Set("server.mode", "release")
+	viper.Set("server.host_url", "")
+	viper.Set("statics.tmpl_path", "html/*")
+	viper.Set("statics.url", "/statics")
+	viper.Set("fund_portfolio.filename", tmpDir)
+	defer viper.Reset()
+
+	app := webserver.NewGinEngine()
+	Routes(app)
+
+	body, contentType := newTianTianXLSXUploadBody(t, "save")
+	recorder := httptest.NewRecorder()
+	req, err := http.NewRequest(http.MethodPost, "/fund/portfolio/tiantian/import/xlsx/json", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", contentType)
+	app.ServeHTTP(recorder, req)
+
+	require.Equal(t, http.StatusInternalServerError, recorder.Code)
+	payload := fundPortfolioTianTianImportJSONResponse{}
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &payload))
+	require.False(t, payload.Saved)
+	require.True(t, payload.Failed)
+	require.NotEmpty(t, payload.Details)
 }
 
 func newTianTianXLSXUploadBody(t *testing.T, action string) (*bytes.Reader, string) {

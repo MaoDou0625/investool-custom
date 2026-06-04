@@ -38,6 +38,7 @@ type fundPortfolioTianTianImportResult struct {
 	SkippedCount int
 	Details      []string
 	NextSteps    []string
+	Failed       bool
 }
 
 func FundPortfolioTianTianLogin(c *gin.Context) {

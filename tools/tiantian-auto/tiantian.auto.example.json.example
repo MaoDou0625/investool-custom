@@ -1,0 +1,16 @@
+{
+  "holdingPageUrl": "https://trade.1234567.com.cn/MyAssets/Default",
+  "loginUrl": "https://login.1234567.com.cn/?direct_url=http://trade.1234567.com.cn/MyAssets/Default",
+  "importUrl": "http://127.0.0.1:4869/fund/portfolio/tiantian/import/xlsx/json",
+  "profileDir": "D:\\Code\\investool-custom\\.local\\tiantian-profile",
+  "downloadDir": "D:\\Code\\investool-custom\\.local\\tiantian-downloads",
+  "browserChannel": "msedge",
+  "autoLogin": true,
+  "headless": true,
+  "timeoutMs": 60000,
+  "save": true,
+  "downloadSelectors": [],
+  "downloadButtonText": ["\u5bfc\u51fa", "\u4e0b\u8f7d", "Excel", "xlsx"],
+  "loginDetectionText": ["\u767b\u5f55", "\u8bf7\u767b\u5f55", "\u4ea4\u6613\u8d26\u53f7", "\u626b\u7801\u767b\u5f55"],
+  "readyDetectionText": ["\u6211\u7684\u8d44\u4ea7", "\u6301\u4ed3", "\u8d44\u4ea7\u660e\u7ec6"]
+}

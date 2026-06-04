@@ -18,6 +18,8 @@ dist/
 *.log
 config.prod.toml
 tmp/
+.local/
+tools/tiantian-auto/node_modules/
 
 x-stock
 investool
@@ -26,4 +28,6 @@ app
 
 statics/js/app.min.*.js
 *.json
+!tools/tiantian-auto/package.json
+!tools/tiantian-auto/package-lock.json
 cron/*.json

@@ -43,6 +43,8 @@ func saveTianTianImportDrafts(drafts []core.FundPortfolioTianTianHoldingDraft) *
 	portfolio, err := store.Load()
 	if err != nil {
 		result.Status = "导入失败"
+		result.StatusClass = "is-error"
+		result.Failed = true
 		result.Details = []string{err.Error()}
 		return result
 	}
@@ -65,6 +67,7 @@ func saveTianTianImportDrafts(drafts []core.FundPortfolioTianTianHoldingDraft) *
 		}
 		if err := store.Upsert(item); err != nil {
 			result.SkippedCount++
+			result.Failed = true
 			result.Details = append(result.Details, draft.DisplayName()+"："+err.Error())
 			continue
 		}
@@ -80,6 +83,10 @@ func saveTianTianImportDrafts(drafts []core.FundPortfolioTianTianHoldingDraft) *
 
 	if len(result.Details) == 0 {
 		result.Details = append(result.Details, "没有可保存的基金。")
+	}
+	if result.Failed && result.AddedCount+result.UpdatedCount == 0 {
+		result.Status = "导入失败"
+		result.StatusClass = "is-error"
 	}
 	result.NextSteps = []string{
 		"回到“我的基金”页面后，可以在已持有列表中查看评分、仓位和图表分析。",
