@@ -21,7 +21,15 @@ const defaults = {
   headless: true,
   timeoutMs: 60000,
   save: true,
-  downloadSelectors: [],
+  holdingDetailUrl: "https://trade.1234567.com.cn/myAssets/hold",
+  fundAssetDetailSelectors: [
+    "a.last[href*='/myAssets/hold']",
+    "a[href*='/myAssets/hold']"
+  ],
+  downloadSelectors: [
+    "a.ico-download[href*='/request/holdprint']",
+    "a[title*='\u4e0b\u8f7d\u6301\u4ed3\u6570\u636e']"
+  ],
   downloadButtonText: ["\u5bfc\u51fa", "\u4e0b\u8f7d", "Excel", "xlsx"],
   loginDetectionText: ["\u767b\u5f55", "\u8bf7\u767b\u5f55", "\u4ea4\u6613\u8d26\u53f7", "\u626b\u7801\u767b\u5f55"],
   readyDetectionText: ["\u6211\u7684\u8d44\u4ea7", "\u6301\u4ed3", "\u8d44\u4ea7\u660e\u7ec6"]
@@ -162,6 +170,7 @@ async function downloadHoldingXLSX(page, config) {
     await page.waitForLoadState("networkidle", { timeout: Math.min(config.timeoutMs, 15000) }).catch(() => undefined);
   }
 
+  await openFundAssetDetailPage(page, config);
   const trigger = await findDownloadTrigger(page, config);
   if (!trigger) {
     throw statusError("download_trigger_not_found", "No export/download control was found on the configured holding page.");
@@ -179,6 +188,30 @@ async function downloadHoldingXLSX(page, config) {
   const target = path.join(config.downloadDir, `${timestamp()}-${suggested}`);
   await download.saveAs(target);
   return target;
+}
+
+async function openFundAssetDetailPage(page, config) {
+  if (/\/myAssets\/hold/i.test(page.url())) {
+    return;
+  }
+
+  for (const selector of config.fundAssetDetailSelectors || []) {
+    const detail = page.locator(selector).first();
+    if (!await isUsable(detail)) {
+      continue;
+    }
+    await detail.click();
+    await page.waitForLoadState("domcontentloaded", { timeout: Math.min(config.timeoutMs, 15000) }).catch(() => undefined);
+    await page.waitForLoadState("networkidle", { timeout: Math.min(config.timeoutMs, 15000) }).catch(() => undefined);
+    if (/\/myAssets\/hold/i.test(page.url())) {
+      return;
+    }
+  }
+
+  if (config.holdingDetailUrl) {
+    await page.goto(config.holdingDetailUrl, { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle", { timeout: Math.min(config.timeoutMs, 15000) }).catch(() => undefined);
+  }
 }
 
 async function classifyPage(page, config) {
@@ -219,10 +252,8 @@ async function tryAutoLogin(page, config) {
     return false;
   }
 
-  await Promise.all([
-    page.waitForURL((url) => !/login\.1234567\.com\.cn/i.test(String(url)), { timeout: Math.min(config.timeoutMs, 20000) }).catch(() => undefined),
-    loginButton.click()
-  ]);
+  await clickLocatorByMouse(page, loginButton);
+  await page.waitForURL((url) => !/login\.1234567\.com\.cn/i.test(String(url)), { timeout: Math.min(config.timeoutMs, 20000) }).catch(() => undefined);
   await page.waitForLoadState("networkidle", { timeout: Math.min(config.timeoutMs, 15000) }).catch(() => undefined);
 
   const postLoginState = await classifyPage(page, config);
@@ -235,6 +266,19 @@ async function tryAutoLogin(page, config) {
     throw err;
   }
   return true;
+}
+
+async function clickLocatorByMouse(page, locator) {
+  await locator.scrollIntoViewIfNeeded();
+  const box = await locator.boundingBox();
+  if (!box) {
+    throw statusError("click_target_not_found", "Clickable target is visible but has no bounding box.");
+  }
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 8 });
+  await page.waitForTimeout(200);
+  await page.mouse.down();
+  await page.waitForTimeout(120);
+  await page.mouse.up();
 }
 
 async function checkVisibleBox(page, selector) {

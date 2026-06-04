@@ -4,7 +4,7 @@ This tool automates the existing TianTian fund portfolio import path:
 
 1. Reuse a persistent browser profile for TianTian login state.
 2. Open the configured holding page.
-3. Download the holding xlsx through configured selectors or common export labels.
+3. Open the fund-asset detail page and download the holding xlsx through the download icon beside the total amount.
 4. Upload the xlsx to the local InvesTool JSON import endpoint.
 5. Print a compact JSON status for Codex or scheduled jobs.
 
