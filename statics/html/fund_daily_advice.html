@@ -120,47 +120,6 @@
     </div>
     {{ end }}
 
-    <div class="section">
-        <h4>全市场候选基金</h4>
-        {{ if eq (len .Report.CandidateActions) 0 }}
-        <p class="grey-text">当前没有候选基金通过筛选。可以先刷新本地基金缓存，或者降低目标收益、评分门槛。</p>
-        {{ else }}
-        <table class="striped responsive-table">
-            <thead>
-                <tr>
-                    <th>基金</th>
-                    <th>动作</th>
-                    <th>试买金额</th>
-                    <th>评分/风险</th>
-                    <th>数据评分</th>
-                    <th>主题/相关性</th>
-                    <th>预期年化</th>
-                    <th>风控指标</th>
-                    <th>依据</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{ range .Report.CandidateActions }}
-                <tr>
-                    <td><strong>{{ .Code }}</strong><br>{{ .Name }}<br><span class="grey-text">{{ .FundType }}</span></td>
-                    <td><span class="badge {{ .BadgeClass }} white-text">{{ .Action }}</span></td>
-                    <td>{{ .SuggestedAmountText }}<br><span class="grey-text">{{ .SuggestedWeightText }}</span></td>
-                    <td>{{ .Score }} / {{ .RiskLevel }}</td>
-                    <td>{{ .StrategyScoreText }}</td>
-                    <td>{{ if .StrategyTheme }}{{ .StrategyTheme }}{{ else }}--{{ end }}<br><span class="grey-text">相关 {{ .CorrelationText }}</span></td>
-                    <td>{{ .ExpectedAnnualReturnText }}</td>
-                    <td>回撤 {{ printf "%.1f" .Drawdown }}%<br>波动 {{ printf "%.1f" .Stddev }}%<br>夏普 {{ printf "%.2f" .Sharp }}</td>
-                    <td>
-                        {{ range .Reasons }}<div>{{ . }}</div>{{ end }}
-                        {{ range .Warnings }}<div class="orange-text text-darken-2">{{ . }}</div>{{ end }}
-                    </td>
-                </tr>
-                {{ end }}
-            </tbody>
-        </table>
-        {{ end }}
-    </div>
-
     {{ range .Report.Warnings }}
     <p class="orange-text text-darken-2">{{ . }}</p>
     {{ end }}
