@@ -121,43 +121,6 @@
     {{ end }}
 
     <div class="section">
-        <h4>当前持仓操作</h4>
-        {{ if eq (len .Report.PortfolioActions) 0 }}
-        <p class="grey-text">暂无已持有基金。可以先在“我的基金”里导入持仓，或参考下方候选基金。</p>
-        {{ else }}
-        <table class="striped responsive-table">
-            <thead>
-                <tr>
-                    <th>基金</th>
-                    <th>动作</th>
-                    <th>建议金额</th>
-                    <th>当前仓位</th>
-                    <th>评分/风险</th>
-                    <th>预期年化</th>
-                    <th>依据</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{ range .Report.PortfolioActions }}
-                <tr>
-                    <td><strong>{{ .Code }}</strong><br>{{ .Name }}<br><span class="grey-text">{{ .FundType }}</span></td>
-                    <td><span class="badge {{ .BadgeClass }} white-text">{{ .Action }}</span></td>
-                    <td>{{ .SuggestedAmountText }}</td>
-                    <td>{{ .CurrentWeightText }}<br><span class="grey-text">当前 {{ printf "%.2f" .CurrentAmount }}</span></td>
-                    <td>{{ .Score }} / {{ .RiskLevel }}<br><span class="grey-text">回撤 {{ printf "%.1f" .Drawdown }}%</span></td>
-                    <td>{{ .ExpectedAnnualReturnText }}</td>
-                    <td>
-                        {{ range .Reasons }}<div>{{ . }}</div>{{ end }}
-                        {{ range .Warnings }}<div class="orange-text text-darken-2">{{ . }}</div>{{ end }}
-                    </td>
-                </tr>
-                {{ end }}
-            </tbody>
-        </table>
-        {{ end }}
-    </div>
-
-    <div class="section">
         <h4>全市场候选基金</h4>
         {{ if eq (len .Report.CandidateActions) 0 }}
         <p class="grey-text">当前没有候选基金通过筛选。可以先刷新本地基金缓存，或者降低目标收益、评分门槛。</p>
