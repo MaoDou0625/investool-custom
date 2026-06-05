@@ -1,0 +1,123 @@
+{{ template "header" . }}
+<div id="fund_daily_advice_content" class="daily-advice-page">
+    <div class="section">
+        <div class="institution-title-row">
+            <div>
+                <h2>每日基金操作建议</h2>
+                <p class="grey-text">以目标年化、总投入上限、现金缓冲和单基金上限作为约束，生成当天可执行的加仓、持有、减仓和候选买入建议。</p>
+            </div>
+            <div class="institution-actions">
+                <a class="btn-flat waves-effect" href="{{ .HostURL }}/fund"><i class="material-icons left">arrow_back</i>基金首页</a>
+                <a class="btn waves-effect waves-light blue-grey" href="{{ .HostURL }}/fund/institution"><i class="material-icons left">account_balance</i>机构持仓</a>
+            </div>
+        </div>
+    </div>
+
+    <form class="institution-filter" method="GET" action="{{ .HostURL }}/fund/daily-advice">
+        <div class="row">
+            <div class="input-field col s12 m4">
+                <input id="target_return" name="target_return" type="number" step="0.1" value="{{ printf "%.1f" .Config.TargetAnnualReturn }}">
+                <label for="target_return">目标年化收益率(%)</label>
+            </div>
+            <div class="input-field col s12 m4">
+                <input id="max_amount" name="max_amount" type="number" step="100" value="{{ printf "%.0f" .Config.MaxTotalAmount }}">
+                <label for="max_amount">总投入上限(元)</label>
+            </div>
+            <div class="col s12 m4 institution-filter-actions">
+                <button class="btn waves-effect waves-light red lighten-2" type="submit"><i class="material-icons left">calculate</i>重新计算</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="institution-metrics">
+        <div><span>生成时间</span><strong>{{ .Report.GeneratedAtText }}</strong></div>
+        <div><span>当前持仓总值</span><strong>{{ .Report.CurrentAmountText }}</strong></div>
+        <div><span>总投入上限</span><strong>{{ .Report.InvestableAmountText }}</strong></div>
+        <div><span>可用加仓空间</span><strong>{{ .Report.CashRoomText }}</strong></div>
+        <div><span>目标年化</span><strong>{{ printf "%.1f%%" .Config.TargetAnnualReturn }}</strong></div>
+        <div><span>候选来源</span><strong>{{ .SourceName }} / {{ .SourceCount }}</strong></div>
+    </div>
+
+    <div class="section daily-advice-note">
+        <p>该页面把 5% 年化目标作为筛选和仓位约束，不表示收益承诺。基金净值和排名会变化，实际操作前仍需要结合当天市场、交易费率和你的现金安排。</p>
+    </div>
+
+    <div class="section">
+        <h4>当前持仓操作</h4>
+        {{ if eq (len .Report.PortfolioActions) 0 }}
+        <p class="grey-text">暂无已持有基金。可以先在“我的基金”里导入持仓，或参考下方候选基金。</p>
+        {{ else }}
+        <table class="striped responsive-table">
+            <thead>
+                <tr>
+                    <th>基金</th>
+                    <th>动作</th>
+                    <th>建议金额</th>
+                    <th>当前仓位</th>
+                    <th>评分/风险</th>
+                    <th>预期年化</th>
+                    <th>依据</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Report.PortfolioActions }}
+                <tr>
+                    <td><strong>{{ .Code }}</strong><br>{{ .Name }}<br><span class="grey-text">{{ .FundType }}</span></td>
+                    <td><span class="badge {{ .BadgeClass }} white-text">{{ .Action }}</span></td>
+                    <td>{{ .SuggestedAmountText }}</td>
+                    <td>{{ .CurrentWeightText }}<br><span class="grey-text">当前 {{ printf "%.2f" .CurrentAmount }}</span></td>
+                    <td>{{ .Score }} / {{ .RiskLevel }}<br><span class="grey-text">回撤 {{ printf "%.1f" .Drawdown }}%</span></td>
+                    <td>{{ .ExpectedAnnualReturnText }}</td>
+                    <td>
+                        {{ range .Reasons }}<div>{{ . }}</div>{{ end }}
+                        {{ range .Warnings }}<div class="orange-text text-darken-2">{{ . }}</div>{{ end }}
+                    </td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+        {{ end }}
+    </div>
+
+    <div class="section">
+        <h4>全市场候选基金</h4>
+        {{ if eq (len .Report.CandidateActions) 0 }}
+        <p class="grey-text">当前没有候选基金通过筛选。可以先刷新本地基金缓存，或者降低目标收益/评分门槛。</p>
+        {{ else }}
+        <table class="striped responsive-table">
+            <thead>
+                <tr>
+                    <th>基金</th>
+                    <th>动作</th>
+                    <th>试买金额</th>
+                    <th>评分/风险</th>
+                    <th>预期年化</th>
+                    <th>风控指标</th>
+                    <th>依据</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Report.CandidateActions }}
+                <tr>
+                    <td><strong>{{ .Code }}</strong><br>{{ .Name }}<br><span class="grey-text">{{ .FundType }}</span></td>
+                    <td><span class="badge {{ .BadgeClass }} white-text">{{ .Action }}</span></td>
+                    <td>{{ .SuggestedAmountText }}<br><span class="grey-text">{{ .SuggestedWeightText }}</span></td>
+                    <td>{{ .Score }} / {{ .RiskLevel }}</td>
+                    <td>{{ .ExpectedAnnualReturnText }}</td>
+                    <td>回撤 {{ printf "%.1f" .Drawdown }}%<br>波动 {{ printf "%.1f" .Stddev }}%<br>夏普 {{ printf "%.2f" .Sharp }}</td>
+                    <td>
+                        {{ range .Reasons }}<div>{{ . }}</div>{{ end }}
+                        {{ range .Warnings }}<div class="orange-text text-darken-2">{{ . }}</div>{{ end }}
+                    </td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+        {{ end }}
+    </div>
+
+    {{ range .Report.Warnings }}
+    <p class="orange-text text-darken-2">{{ . }}</p>
+    {{ end }}
+</div>
+{{ template "footer" . }}

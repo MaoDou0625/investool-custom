@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/axiaoxin-com/investool/core"
-	"github.com/axiaoxin-com/investool/datacenter/eastmoney"
 	"github.com/axiaoxin-com/investool/models"
 	"github.com/axiaoxin-com/investool/version"
 	"github.com/gin-gonic/gin"
@@ -72,30 +71,12 @@ func FundPortfolioDelete(c *gin.Context) {
 }
 
 func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, screenshotDraft *core.FundPortfolioScreenshotDraft) {
-	store := newFundPortfolioStore()
-	portfolio, err := store.Load()
-	if err != nil && pageErr == "" {
-		pageErr = err.Error()
-	}
-
-	funds := map[string]*models.Fund{}
-	holderStructures := map[string]eastmoney.FundHolderStructureResult{}
-	if len(portfolio.Items) > 0 && pageErr == "" {
-		searcher := core.NewSearcher(c)
-		var searchErr error
-		funds, searchErr = searcher.SearchFunds(c, portfolio.Codes())
-		if searchErr != nil {
-			pageErr = searchErr.Error()
-		}
-	}
-
-	if len(funds) > 0 && pageErr == "" {
-		holderStructures = queryFundHolderStructures(c, funds)
-	}
-
-	exposureReport := buildFundPortfolioExposureReport(c, portfolio, funds, pageErr)
-	allAdvices := core.EvaluateFundPortfolio(c, portfolio.Items, funds, holderStructures)
-	ownedAdvices, watchAdvices := splitFundPortfolioAdvices(allAdvices)
+	portfolioContext := loadFundPortfolioAnalysisContext(c, pageErr)
+	pageErr = portfolioContext.PageError
+	exposureReport := portfolioContext.ExposureReport
+	allAdvices := portfolioContext.AllAdvices
+	ownedAdvices := portfolioContext.OwnedAdvices
+	watchAdvices := portfolioContext.WatchAdvices
 	portfolioHistory, historyWarnings := loadAndUpdateFundPortfolioHistory(ownedAdvices)
 	exposureReport.Warnings = append(exposureReport.Warnings, historyWarnings...)
 	now := time.Now()
@@ -122,7 +103,7 @@ func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, scr
 		PageTitle:         "InvesTool | 我的基金",
 		Error:             pageErr,
 		Message:           message,
-		Portfolio:         portfolio,
+		Portfolio:         portfolioContext.Portfolio,
 		OwnedAdvices:      ownedAdvices,
 		WatchAdvices:      watchAdvices,
 		AllAdvices:        allAdvices,

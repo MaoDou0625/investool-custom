@@ -1,0 +1,181 @@
+{{ template "header" . }}
+<div id="institution_holdings_content" class="institution-page">
+    <div class="section">
+        <div class="institution-title-row">
+            <div>
+                <h2>名人/机构持仓观察</h2>
+                <p class="grey-text">基于 SEC 13F 公开披露数据，展示机构持仓、季度变化、行业暴露，并和我的基金重仓股做重叠检查。</p>
+            </div>
+            <div class="institution-actions">
+                <a class="btn-flat waves-effect" href="{{ .HostURL }}/fund"><i class="material-icons left">arrow_back</i>基金首页</a>
+                <a class="btn waves-effect waves-light blue-grey" href="{{ .HostURL }}/fund/daily-advice"><i class="material-icons left">assignment</i>每日建议</a>
+            </div>
+        </div>
+    </div>
+
+    <form class="institution-filter" method="GET" action="{{ .HostURL }}/fund/institution">
+        <div class="row">
+            <div class="input-field col s12 m4">
+                <select name="institution">
+                    {{ range .Profiles }}
+                    <option value="{{ .ID }}" {{ if eq $.SelectedID .ID }}selected{{ end }}>{{ .Name }}</option>
+                    {{ end }}
+                </select>
+                <label>机构</label>
+            </div>
+            <div class="input-field col s12 m4">
+                <input id="institution_cik" name="cik" type="text" value="{{ .CustomCIK }}">
+                <label for="institution_cik">自定义 SEC CIK</label>
+            </div>
+            <div class="col s12 m4 institution-filter-actions">
+                <button class="btn waves-effect waves-light red lighten-2" type="submit"><i class="material-icons left">search</i>查看</button>
+                <a class="btn waves-effect waves-light blue lighten-1" href="{{ .HostURL }}/fund/institution?institution={{ .SelectedID }}{{ if .CustomCIK }}&cik={{ .CustomCIK }}{{ end }}&refresh=1"><i class="material-icons left">refresh</i>刷新13F</a>
+            </div>
+        </div>
+    </form>
+
+    {{ if .Analysis.Report.AccessionNumber }}
+    <div class="institution-metrics">
+        <div><span>机构</span><strong>{{ .Analysis.Report.InstitutionName }}</strong></div>
+        <div><span>报告期</span><strong>{{ .Analysis.Report.ReportDate }}</strong></div>
+        <div><span>提交日</span><strong>{{ .Analysis.Report.FilingDate }}</strong></div>
+        <div><span>总市值</span><strong>{{ .Analysis.Report.TotalValueText }}</strong></div>
+        <div><span>持仓数</span><strong>{{ len .Analysis.Report.Holdings }}</strong></div>
+        <div><span>本地缓存</span><strong>{{ .CacheFile }}</strong></div>
+    </div>
+
+    <div class="section">
+        <h4>行业暴露</h4>
+        <table class="striped responsive-table institution-compact-table">
+            <thead>
+                <tr>
+                    <th>行业</th>
+                    <th>权重</th>
+                    <th>市值</th>
+                    <th>持仓数</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Analysis.SectorExposures }}
+                <tr>
+                    <td>{{ .Sector }}</td>
+                    <td>
+                        <div class="institution-bar"><span style="width: {{ printf "%.2f" .Weight }}%;"></span></div>
+                        {{ .WeightText }}
+                    </td>
+                    <td>{{ .ValueText }}</td>
+                    <td>{{ .HoldingCount }}</td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h4>持仓变化</h4>
+        {{ if eq (len .Analysis.TopChanges) 0 }}
+        <p class="grey-text">未发现明显增减仓，或缓存中没有上一期 13F 数据。</p>
+        {{ else }}
+        <table class="striped responsive-table">
+            <thead>
+                <tr>
+                    <th>公司</th>
+                    <th>代码</th>
+                    <th>行业</th>
+                    <th>类型</th>
+                    <th>股份变化</th>
+                    <th>当前市值</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Analysis.TopChanges }}
+                <tr>
+                    <td>{{ .IssuerName }}</td>
+                    <td>{{ .Ticker }}</td>
+                    <td>{{ .Sector }}</td>
+                    <td>{{ .Kind }}</td>
+                    <td>{{ .ShareChangeText }}</td>
+                    <td>{{ .ValueText }}</td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+        {{ end }}
+    </div>
+
+    <div class="section">
+        <h4>和我的基金重仓股重叠</h4>
+        {{ if eq (len .Analysis.Overlaps) 0 }}
+        <p class="grey-text">当前没有发现直接重叠。对 A 股基金而言，伯克希尔等美股 13F 组合通常不会和基金前十大重仓股直接重合。</p>
+        {{ else }}
+        <table class="striped responsive-table">
+            <thead>
+                <tr>
+                    <th>机构持仓</th>
+                    <th>基金重仓股</th>
+                    <th>基金来源</th>
+                    <th>机构权重</th>
+                    <th>基金权重</th>
+                    <th>匹配方式</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Analysis.Overlaps }}
+                <tr>
+                    <td>{{ .IssuerName }} {{ if .Ticker }}({{ .Ticker }}){{ end }}</td>
+                    <td>{{ .FundStockName }} {{ if .FundStockCode }}({{ .FundStockCode }}){{ end }}</td>
+                    <td>{{ .FundSource }}</td>
+                    <td>{{ .InstitutionWeightText }}</td>
+                    <td>{{ .FundWeightText }}</td>
+                    <td>{{ .MatchType }}</td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+        {{ end }}
+    </div>
+
+    <div class="section">
+        <h4>持仓明细</h4>
+        <table class="striped responsive-table">
+            <thead>
+                <tr>
+                    <th>公司</th>
+                    <th>代码</th>
+                    <th>CUSIP</th>
+                    <th>行业</th>
+                    <th>权重</th>
+                    <th>市值</th>
+                    <th>股份变化</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Analysis.Report.Holdings }}
+                <tr>
+                    <td>{{ .IssuerName }}</td>
+                    <td>{{ .Ticker }}</td>
+                    <td>{{ .CUSIP }}</td>
+                    <td>{{ .Sector }}</td>
+                    <td>{{ .WeightText }}</td>
+                    <td>{{ .ValueText }}</td>
+                    <td>{{ .ShareChangeText }}</td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <p class="grey-text">数据源：<a href="{{ .Analysis.Report.SourceURL }}" target="_blank" rel="noopener">SEC filing index</a> / <a href="{{ .Analysis.Report.InformationTableURL }}" target="_blank" rel="noopener">information table XML</a>。13F 披露有季度滞后，只能反映报告日附近的持仓，不代表机构当前实时持仓。</p>
+    </div>
+    {{ else }}
+    <div class="section">
+        <p class="grey-text">暂无 13F 数据。点击“刷新13F”后会从 SEC 拉取并写入本地缓存。</p>
+    </div>
+    {{ end }}
+
+    {{ range .Analysis.Warnings }}
+    <p class="orange-text text-darken-2">{{ . }}</p>
+    {{ end }}
+</div>
+{{ template "footer" . }}
