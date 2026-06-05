@@ -17,6 +17,7 @@ func Routes(app *gin.Engine) {
 	app.GET("/fund/4433/recommendation/refresh", Fund4433RecommendationRefresh)
 	app.GET("/fund/4433/recommendation/status", Fund4433RecommendationStatus)
 	app.GET("/fund/daily-advice", FundDailyAdvicePage)
+	app.GET("/fund/daily-advice/context.json", FundDailyAdviceContextJSON)
 	app.GET("/fund/institution", InstitutionHoldingsPage)
 	app.POST("/launcher/session/heartbeat", LauncherSessionHeartbeat)
 	app.GET("/launcher/session/status", LauncherSessionStatus)

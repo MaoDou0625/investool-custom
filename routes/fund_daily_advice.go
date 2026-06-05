@@ -24,31 +24,58 @@ type fundDailyAdviceViewData struct {
 	SourceName  string
 }
 
-func FundDailyAdvicePage(c *gin.Context) {
-	portfolioContext := loadFundPortfolioAnalysisContextWithOptions(c, "", fundPortfolioAnalysisLoadOptions{
-		UseLocalFundCache: true,
-	})
-	config := fundDailyAdviceConfigFromSettings(c)
-	navCache, navWarnings := loadFundDailyAdviceNAVCache()
-	selection := core.SelectDailyAdviceCandidatesWithStrategy(c, models.FundAllList, models.Fund4433RecommendationList, portfolioContext.AllAdvices, navCache, config.CandidateCount*18)
-	report := core.BuildFundDailyAdviceReportWithEvidence(c, portfolioContext.AllAdvices, selection.Funds, selection.Evidence, config)
-	report.Warnings = append(report.Warnings, navWarnings...)
-	report.Warnings = append(report.Warnings, selection.Warnings...)
-	pageErr := portfolioContext.PageError
+type fundDailyAdviceBundle struct {
+	Report      core.FundDailyAdviceReport
+	Config      core.FundDailyAdviceConfig
+	CacheCount  int
+	SourceCount int
+	SourceName  string
+	PageError   string
+}
 
+func FundDailyAdvicePage(c *gin.Context) {
+	bundle := buildFundDailyAdviceBundle(c)
 	data := fundDailyAdviceViewData{
 		Env:         viper.GetString("env"),
 		HostURL:     viper.GetString("server.host_url"),
 		Version:     version.Version,
 		PageTitle:   "InvesTool | 每日基金操作建议",
-		Error:       pageErr,
+		Error:       bundle.PageError,
+		Report:      bundle.Report,
+		Config:      bundle.Config,
+		CacheCount:  bundle.CacheCount,
+		SourceCount: bundle.SourceCount,
+		SourceName:  bundle.SourceName,
+	}
+	c.HTML(http.StatusOK, "fund_daily_advice.html", data)
+}
+
+func FundDailyAdviceContextJSON(c *gin.Context) {
+	bundle := buildFundDailyAdviceBundle(c)
+	c.JSON(http.StatusOK, bundle.Report.AIContext)
+}
+
+func buildFundDailyAdviceBundle(c *gin.Context) fundDailyAdviceBundle {
+	portfolioContext := loadFundPortfolioAnalysisContextWithOptions(c, "", fundPortfolioAnalysisLoadOptions{
+		UseLocalFundCache: true,
+	})
+	config := fundDailyAdviceConfigFromSettings(c)
+	navCache, navWarnings := loadFundDailyAdviceNAVCache()
+	candidatePoolCount := maxInt(config.AICandidateCount, config.CandidateCount*18)
+	selection := core.SelectDailyAdviceCandidatesWithStrategy(c, models.FundAllList, models.Fund4433RecommendationList, portfolioContext.AllAdvices, navCache, candidatePoolCount)
+	report := core.BuildFundDailyAdviceReportWithEvidence(c, portfolioContext.AllAdvices, selection.Funds, selection.Evidence, config)
+	report.Warnings = append(report.Warnings, navWarnings...)
+	report.Warnings = append(report.Warnings, selection.Warnings...)
+	report.AIContext = core.BuildFundDailyAIContext(report)
+
+	return fundDailyAdviceBundle{
 		Report:      report,
 		Config:      config,
 		CacheCount:  len(models.FundAllList),
 		SourceCount: selection.SourceCount,
 		SourceName:  selection.SourceName,
+		PageError:   portfolioContext.PageError,
 	}
-	c.HTML(http.StatusOK, "fund_daily_advice.html", data)
 }
 
 func loadFundDailyAdviceNAVCache() (models.FundNAVHistoryCache, []string) {
@@ -83,6 +110,9 @@ func fundDailyAdviceConfigFromSettings(c *gin.Context) core.FundDailyAdviceConfi
 	if viper.IsSet("fund_advice.candidate_count") {
 		config.CandidateCount = viper.GetInt("fund_advice.candidate_count")
 	}
+	if viper.IsSet("fund_advice.ai_candidate_count") {
+		config.AICandidateCount = viper.GetInt("fund_advice.ai_candidate_count")
+	}
 	if viper.IsSet("fund_advice.min_candidate_score") {
 		config.MinCandidateScore = viper.GetInt("fund_advice.min_candidate_score")
 	}
@@ -105,6 +135,11 @@ func fundDailyAdviceConfigFromSettings(c *gin.Context) core.FundDailyAdviceConfi
 			config.MaxDailyBuyWeight = value
 		}
 	}
+	if c.Query("ai_candidates") != "" {
+		if value, ok := parseQueryInt(c.Query("ai_candidates")); ok {
+			config.AICandidateCount = value
+		}
+	}
 	return config
 }
 
@@ -114,4 +149,19 @@ func parseQueryFloat(raw string) (float64, bool) {
 		return 0, false
 	}
 	return value, true
+}
+
+func parseQueryInt(raw string) (int, bool) {
+	var value int
+	if _, err := fmt.Sscanf(raw, "%d", &value); err != nil {
+		return 0, false
+	}
+	return value, true
+}
+
+func maxInt(a int, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

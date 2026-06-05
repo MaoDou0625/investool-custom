@@ -19,22 +19,27 @@ type FundDailyAdviceConfig struct {
 	TacticalWeight        float64
 	MaxDailyBuyWeight     float64
 	CandidateCount        int
+	AICandidateCount      int
 	MinCandidateScore     int
 	MinCoreCandidateScore int
 }
 
 type FundDailyAdviceReport struct {
-	GeneratedAt           time.Time
-	Config                FundDailyAdviceConfig
-	CurrentAmount         float64
-	InvestableAmount      float64
-	CashRoom              float64
-	CashBufferAmount      float64
-	DailyBuyBudget        float64
-	DailyBuyBudgetReasons []string
-	PortfolioActions      []FundDailyAction
-	CandidateActions      []FundDailyAction
-	Warnings              []string
+	GeneratedAt              time.Time
+	Config                   FundDailyAdviceConfig
+	CurrentAmount            float64
+	InvestableAmount         float64
+	CashRoom                 float64
+	CashBufferAmount         float64
+	DailyBuyBudget           float64
+	DailyBuyBudgetReasons    []string
+	DecisionPortfolioActions []FundDailyAction
+	DecisionCandidateActions []FundDailyAction
+	PortfolioActions         []FundDailyAction
+	CandidateActions         []FundDailyAction
+	AIContext                FundDailyAIContext
+	AIDecision               FundDailyAIDecision
+	Warnings                 []string
 }
 
 type FundDailyAction struct {
@@ -42,6 +47,9 @@ type FundDailyAction struct {
 	Name                 string
 	FundType             string
 	Source               string
+	IndexName            string
+	TargetETFCode        string
+	TargetETFName        string
 	Action               string
 	ActionLevel          string
 	StrategyScore        float64
@@ -62,8 +70,40 @@ type FundDailyAction struct {
 	Drawdown             float64
 	Stddev               float64
 	Sharp                float64
+	NetAssetsScaleYi     float64
+	UnitNAV              float64
+	DailyProfitRatio     float64
+	Month1Return         float64
+	Month3Return         float64
+	Month6Return         float64
+	ThisYearReturn       float64
+	Year1Return          float64
+	Year3Return          float64
+	Year5Return          float64
+	Month1RankRatio      float64
+	Month3RankRatio      float64
+	Month6RankRatio      float64
+	ThisYearRankRatio    float64
+	Year1RankRatio       float64
+	ManagerName          string
+	ManagerWorkingYears  float64
+	ManagerManageYears   float64
+	ManagerManageReturn  float64
+	ManagerAnnualReturn  float64
+	AssetStock           string
+	AssetBond            string
+	AssetCash            string
+	TopStocks            []FundDailyTopHolding
 	Reasons              []string
 	Warnings             []string
+}
+
+type FundDailyTopHolding struct {
+	Code        string  `json:"code"`
+	Name        string  `json:"name"`
+	Industry    string  `json:"industry,omitempty"`
+	HoldRatio   float64 `json:"hold_ratio"`
+	AdjustRatio float64 `json:"adjust_ratio"`
 }
 
 func DefaultFundDailyAdviceConfig() FundDailyAdviceConfig {
@@ -75,6 +115,7 @@ func DefaultFundDailyAdviceConfig() FundDailyAdviceConfig {
 		TacticalWeight:        20,
 		MaxDailyBuyWeight:     10,
 		CandidateCount:        8,
+		AICandidateCount:      50,
 		MinCandidateScore:     68,
 		MinCoreCandidateScore: 75,
 	}
@@ -113,12 +154,17 @@ func BuildFundDailyAdviceReportWithEvidence(
 		report.CashRoom = 0
 	}
 
-	report.PortfolioActions = buildDailyPortfolioActions(portfolioAdvices, report)
-	report.CandidateActions = buildDailyCandidateActions(ctx, candidateFunds, portfolioAdvices, candidateEvidence, report)
-	decision := chooseDailyBuyBudget(report.PortfolioActions, report.CandidateActions, report)
+	report.DecisionPortfolioActions = buildDailyPortfolioActions(portfolioAdvices, report)
+	report.DecisionCandidateActions = buildDailyCandidateActions(ctx, candidateFunds, portfolioAdvices, candidateEvidence, report)
+	decision := chooseDailyBuyBudget(report.DecisionPortfolioActions, report.DecisionCandidateActions, report)
 	report.DailyBuyBudget = decision.Budget
 	report.DailyBuyBudgetReasons = decision.Reasons
-	report.PortfolioActions, report.CandidateActions = applyDailyBuyBudget(report.PortfolioActions, report.CandidateActions, report)
+	report.PortfolioActions, report.CandidateActions = applyDailyBuyBudget(
+		cloneFundDailyActions(report.DecisionPortfolioActions),
+		cloneFundDailyActions(report.DecisionCandidateActions),
+		report,
+	)
+	report.CandidateActions = limitDailyCandidateActionsForDisplay(report.CandidateActions, report.Config.CandidateCount)
 	if report.CurrentAmount > config.MaxTotalAmount {
 		report.Warnings = append(report.Warnings, fmt.Sprintf("Current holding value %.2f exceeds configured max %.2f; new buys are disabled until exposure is reduced.", report.CurrentAmount, config.MaxTotalAmount))
 	}
@@ -197,10 +243,38 @@ func buildDailyCandidateActions(ctx context.Context, funds models.FundList, port
 		}
 		return actions[i].Code < actions[j].Code
 	})
-	if len(actions) > report.Config.CandidateCount {
-		actions = actions[:report.Config.CandidateCount]
-	}
 	return actions
+}
+
+func cloneFundDailyActions(actions []FundDailyAction) []FundDailyAction {
+	if len(actions) == 0 {
+		return nil
+	}
+	cloned := make([]FundDailyAction, len(actions))
+	copy(cloned, actions)
+	return cloned
+}
+
+func limitDailyCandidateActionsForDisplay(actions []FundDailyAction, limit int) []FundDailyAction {
+	if limit <= 0 || len(actions) <= limit {
+		return actions
+	}
+	display := cloneFundDailyActions(actions)
+	sort.SliceStable(display, func(i, j int) bool {
+		leftBuy := display[i].SuggestedAmount > 0
+		rightBuy := display[j].SuggestedAmount > 0
+		if leftBuy != rightBuy {
+			return leftBuy
+		}
+		if display[i].StrategyScore != display[j].StrategyScore {
+			return display[i].StrategyScore > display[j].StrategyScore
+		}
+		if display[i].Score != display[j].Score {
+			return display[i].Score > display[j].Score
+		}
+		return display[i].Code < display[j].Code
+	})
+	return display[:limit]
 }
 
 func dailyActionFromAdvice(advice FundPortfolioAdvice, source string, report FundDailyAdviceReport) FundDailyAction {
@@ -217,11 +291,7 @@ func dailyActionFromAdvice(advice FundPortfolioAdvice, source string, report Fun
 		Warnings:             advice.Warnings,
 	}
 	if advice.Fund != nil {
-		action.Name = advice.Fund.Name
-		action.FundType = advice.Fund.Type
-		action.Drawdown = advice.Fund.MaxRetracement.Avg135
-		action.Stddev = advice.Fund.Stddev.Avg135
-		action.Sharp = advice.Fund.Sharp.Avg135
+		fillDailyFundActionMetrics(&action, advice.Fund)
 	}
 	if action.Name == "" {
 		action.Name = advice.Item.Code
@@ -233,6 +303,53 @@ func dailyActionFromAdvice(advice FundPortfolioAdvice, source string, report Fun
 	action.Action = advice.Action
 	action.ActionLevel = "watch"
 	return action
+}
+
+func fillDailyFundActionMetrics(action *FundDailyAction, fund *models.Fund) {
+	action.Name = fund.Name
+	action.FundType = fund.Type
+	action.IndexName = fund.IndexName
+	action.TargetETFCode = fund.TargetETFCode
+	action.TargetETFName = fund.TargetETFName
+	action.Drawdown = fund.MaxRetracement.Avg135
+	action.Stddev = fund.Stddev.Avg135
+	action.Sharp = fund.Sharp.Avg135
+	action.NetAssetsScaleYi = fund.NetAssetsScale / 100000000
+	action.UnitNAV = fund.UnitNav
+	action.DailyProfitRatio = fund.DailyProfitRatio
+	action.Month1Return = fund.Performance.Month1ProfitRatio
+	action.Month3Return = fund.Performance.Month3ProfitRatio
+	action.Month6Return = fund.Performance.Month6ProfitRatio
+	action.ThisYearReturn = fund.Performance.ThisYearProfitRatio
+	action.Year1Return = fund.Performance.Year1ProfitRatio
+	action.Year3Return = fund.Performance.Year3ProfitRatio
+	action.Year5Return = fund.Performance.Year5ProfitRatio
+	action.Month1RankRatio = fund.Performance.Month1RankRatio
+	action.Month3RankRatio = fund.Performance.Month3RankRatio
+	action.Month6RankRatio = fund.Performance.Month6RankRatio
+	action.ThisYearRankRatio = fund.Performance.ThisYearRankRatio
+	action.Year1RankRatio = fund.Performance.Year1RankRatio
+	action.ManagerName = fund.Manager.Name
+	action.ManagerWorkingYears = fund.Manager.WorkingDays / 365
+	action.ManagerManageYears = fund.Manager.ManageDays / 365
+	action.ManagerManageReturn = fund.Manager.ManageRepay
+	action.ManagerAnnualReturn = fund.Manager.YearsAvgRepay
+	action.AssetStock = fund.AssetsProportion.Stock
+	action.AssetBond = fund.AssetsProportion.Bond
+	action.AssetCash = fund.AssetsProportion.Cash
+	action.TopStocks = make([]FundDailyTopHolding, 0, minInt(5, len(fund.Stocks)))
+	for idx, stock := range fund.Stocks {
+		if idx >= 5 {
+			break
+		}
+		action.TopStocks = append(action.TopStocks, FundDailyTopHolding{
+			Code:        stock.Code,
+			Name:        stock.Name,
+			Industry:    stock.Industry,
+			HoldRatio:   stock.HoldRatio,
+			AdjustRatio: stock.AdjustRatio,
+		})
+	}
 }
 
 func applyFundDailyCandidateEvidence(action *FundDailyAction, evidence FundDailyCandidateEvidence) {
@@ -329,6 +446,12 @@ func normalizeFundDailyAdviceConfig(config FundDailyAdviceConfig) FundDailyAdvic
 	}
 	if config.CandidateCount <= 0 {
 		config.CandidateCount = defaults.CandidateCount
+	}
+	if config.AICandidateCount <= 0 {
+		config.AICandidateCount = defaults.AICandidateCount
+	}
+	if config.AICandidateCount < config.CandidateCount {
+		config.AICandidateCount = config.CandidateCount
 	}
 	if config.MinCandidateScore <= 0 {
 		config.MinCandidateScore = defaults.MinCandidateScore

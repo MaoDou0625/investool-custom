@@ -43,6 +43,7 @@ env = "localhost"
     tactical_weight = 20.0
     max_daily_buy_weight = 10.0
     candidate_count = 8
+    ai_candidate_count = 50
     min_candidate_score = 68
     min_core_candidate_score = 75
 
