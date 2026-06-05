@@ -91,6 +91,8 @@
                     <th>动作</th>
                     <th>试买金额</th>
                     <th>评分/风险</th>
+                    <th>数据评分</th>
+                    <th>主题/相关性</th>
                     <th>预期年化</th>
                     <th>风控指标</th>
                     <th>依据</th>
@@ -103,6 +105,8 @@
                     <td><span class="badge {{ .BadgeClass }} white-text">{{ .Action }}</span></td>
                     <td>{{ .SuggestedAmountText }}<br><span class="grey-text">{{ .SuggestedWeightText }}</span></td>
                     <td>{{ .Score }} / {{ .RiskLevel }}</td>
+                    <td>{{ .StrategyScoreText }}</td>
+                    <td>{{ if .StrategyTheme }}{{ .StrategyTheme }}{{ else }}--{{ end }}<br><span class="grey-text">相关 {{ .CorrelationText }}</span></td>
                     <td>{{ .ExpectedAnnualReturnText }}</td>
                     <td>回撤 {{ printf "%.1f" .Drawdown }}%<br>波动 {{ printf "%.1f" .Stddev }}%<br>夏普 {{ printf "%.2f" .Sharp }}</td>
                     <td>

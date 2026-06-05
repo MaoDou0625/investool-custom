@@ -29,16 +29,12 @@ func FundDailyAdvicePage(c *gin.Context) {
 		UseLocalFundCache: true,
 	})
 	config := fundDailyAdviceConfigFromSettings(c)
-	candidates := core.SelectDailyAdviceCandidates(c, models.FundAllList, models.Fund4433RecommendationList, config.CandidateCount*12)
-	report := core.BuildFundDailyAdviceReport(c, portfolioContext.AllAdvices, candidates, config)
+	navCache, navWarnings := loadFundDailyAdviceNAVCache()
+	selection := core.SelectDailyAdviceCandidatesWithStrategy(c, models.FundAllList, models.Fund4433RecommendationList, portfolioContext.AllAdvices, navCache, config.CandidateCount*18)
+	report := core.BuildFundDailyAdviceReportWithEvidence(c, portfolioContext.AllAdvices, selection.Funds, selection.Evidence, config)
+	report.Warnings = append(report.Warnings, navWarnings...)
+	report.Warnings = append(report.Warnings, selection.Warnings...)
 	pageErr := portfolioContext.PageError
-
-	sourceName := "本地全量基金缓存"
-	sourceCount := len(models.FundAllList)
-	if len(models.FundAllList) == 0 {
-		sourceName = "每日候选基金"
-		sourceCount = len(models.Fund4433RecommendationList)
-	}
 
 	data := fundDailyAdviceViewData{
 		Env:         viper.GetString("env"),
@@ -49,10 +45,19 @@ func FundDailyAdvicePage(c *gin.Context) {
 		Report:      report,
 		Config:      config,
 		CacheCount:  len(models.FundAllList),
-		SourceCount: sourceCount,
-		SourceName:  sourceName,
+		SourceCount: selection.SourceCount,
+		SourceName:  selection.SourceName,
 	}
 	c.HTML(http.StatusOK, "fund_daily_advice.html", data)
+}
+
+func loadFundDailyAdviceNAVCache() (models.FundNAVHistoryCache, []string) {
+	cache := models.FundNAVHistoryCache{Items: map[string]models.FundNAVHistoryCacheItem{}}
+	loaded, err := newFundNAVHistoryCacheStore().Load()
+	if err != nil {
+		return cache, []string{fmt.Sprintf("历史净值缓存读取失败，候选相关性将降级为主题重叠估算：%v", err)}
+	}
+	return loaded, nil
 }
 
 func fundDailyAdviceConfigFromSettings(c *gin.Context) core.FundDailyAdviceConfig {
