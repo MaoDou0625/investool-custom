@@ -156,6 +156,7 @@ func buildDailyCandidateActions(ctx context.Context, funds models.FundList, port
 		action.SuggestedWeight = amountToWeight(action.SuggestedAmount, report.InvestableAmount)
 		actions = append(actions, action)
 	}
+	actions = preferClassCFundDailyActions(actions)
 	sort.SliceStable(actions, func(i, j int) bool {
 		if actions[i].Score != actions[j].Score {
 			return actions[i].Score > actions[j].Score
