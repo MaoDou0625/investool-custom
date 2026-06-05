@@ -107,6 +107,20 @@
     });
   }
 
+  function resizeChartsSoon() {
+    window.requestAnimationFrame(function () {
+      resizeCharts();
+      window.setTimeout(resizeCharts, 80);
+    });
+  }
+
+  function resizeChartsIfAnalysisVisible() {
+    var page = document.getElementById("fund_portfolio_content");
+    if (page && page.getAttribute("data-active-portfolio-page") === "portfolio-analysis") {
+      resizeChartsSoon();
+    }
+  }
+
   function sumBy(rows, fieldName) {
     var total = 0;
     rows.forEach(function (row) {
@@ -898,6 +912,14 @@
       return;
     }
 
+    window.fundPortfolioResizeCharts = resizeChartsSoon;
+    window.addEventListener("resize", resizeCharts);
+    window.addEventListener("fundPortfolioPageChanged", function (event) {
+      if (event.detail && event.detail.target === "portfolio-analysis") {
+        resizeChartsSoon();
+      }
+    });
+
     renderThemeExposure(data);
     renderStockExposure(data);
     renderRiskReturn(data);
@@ -906,7 +928,6 @@
     renderCorrelation(data);
     maybeRefreshCorrelation(data);
     renderComparison(data);
-    window.fundPortfolioResizeCharts = resizeCharts;
-    window.addEventListener("resize", resizeCharts);
+    resizeChartsIfAnalysisVisible();
   });
 })();

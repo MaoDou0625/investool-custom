@@ -19,12 +19,24 @@
     }
     if (data.refreshing) {
       if (!data.total) {
-        return "正在获取基金代码列表，稍后会开始补全基金详情。";
+        return data.stage === "build_plan" ? "正在按 4433、缺失缓存和过期时间生成优先刷新计划。" : "正在获取基金代码列表，稍后会开始补全基金详情。";
       }
-      return "已处理 " + data.processed + "/" + data.total + "，成功 " + data.succeeded + "，失败 " + data.failed + "。";
+      var prefix = data.mode === "priority" ? "优先刷新" : "全量刷新";
+      var detail = prefix + " " + data.processed + "/" + data.total + "，成功 " + data.succeeded + "，失败 " + data.failed + "。";
+      if (data.mode === "priority") {
+        detail += " 本批 4433 过期 " + (data.priority_4433_count || 0) + " 只，缺失缓存 " + (data.missing_count || 0) + " 只，其他过期 " + (data.stale_other_count || 0) + " 只。";
+        if (data.deferred_count) {
+          detail += " 另有 " + data.deferred_count + " 只排到后续空闲批次。";
+        }
+      }
+      return detail;
     }
     if (data.stage === "done") {
-      return "刷新完成:" + data.finished_at + "，缓存 " + data.fund_count + " 只基金，严格 4433 " + data.fund_4433_count + " 只，每日候选 " + data.recommendation_count + " 只。";
+      var doneText = "刷新完成:" + data.finished_at + "，缓存 " + data.fund_count + " 只基金，严格 4433 " + data.fund_4433_count + " 只，每日候选 " + data.recommendation_count + " 只。";
+      if (data.mode === "priority") {
+        doneText += " 最近一批按优先级刷新 " + (data.planned || data.total || 0) + " 只。";
+      }
+      return doneText;
     }
     return "当前缓存状态会在刷新时自动更新。";
   }

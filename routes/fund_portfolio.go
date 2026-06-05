@@ -29,6 +29,7 @@ type fundPortfolioViewData struct {
 	AllAdvices        []core.FundPortfolioAdvice
 	ExposureReport    core.FundPortfolioExposureReport
 	ExposureChartData template.JS
+	HasChartData      bool
 	ScreenshotDraft   *core.FundPortfolioScreenshotDraft
 	TianTianResult    *fundPortfolioTianTianImportResult
 	PortfolioFile     string
@@ -99,6 +100,7 @@ func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, scr
 	exposureReport.Warnings = append(exposureReport.Warnings, historyWarnings...)
 	correlationSources, correlationRefresh, correlationWarnings := loadFundPortfolioCorrelationSources(allAdvices, time.Now())
 	exposureReport.Warnings = append(exposureReport.Warnings, correlationWarnings...)
+	chartData := buildFundPortfolioChartData(exposureReport, allAdvices, portfolioHistory, correlationSources, correlationRefresh)
 
 	data := fundPortfolioViewData{
 		Env:               viper.GetString("env"),
@@ -112,7 +114,8 @@ func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, scr
 		WatchAdvices:      watchAdvices,
 		AllAdvices:        allAdvices,
 		ExposureReport:    exposureReport,
-		ExposureChartData: buildFundPortfolioChartDataJSON(exposureReport, allAdvices, portfolioHistory, correlationSources, correlationRefresh),
+		ExposureChartData: marshalFundPortfolioChartDataJSON(chartData),
+		HasChartData:      chartData.HasData(),
 		ScreenshotDraft:   screenshotDraft,
 		TianTianResult:    buildFundPortfolioTianTianResult(c.Query("tiantian_result")),
 		PortfolioFile:     fundPortfolioFilename(),

@@ -51,7 +51,7 @@
                     <em>{{ .Fund4433RecommendationSourceCount }} 只</em>
                 </div>
                 <div>
-                    <span>本地全量缓存</span>
+                    <span>本地基金缓存</span>
                     <strong>{{ .AllFundCount }}</strong>
                 </div>
                 <div>
@@ -100,7 +100,7 @@
              data-page-url="{{ .HostURL }}/fund#4433">
             <div class="fund-cache-refresh-header">
                 <div>
-                    <span>本地全量缓存</span>
+                    <span>本地基金缓存</span>
                     {{ if .FundCacheRefresh.Refreshing }}
                     <strong id="fund-cache-refresh-title">{{ .FundCacheRefresh.StageText }}</strong>
                     {{ else if .FundCacheRefresh.Error }}
@@ -109,7 +109,7 @@
                     <strong id="fund-cache-refresh-title">{{ .AllFundCount }} 只基金</strong>
                     {{ end }}
                     <p id="fund-cache-refresh-summary">
-                        本地缓存用于生成严格 4433、每日候选和后续基金分析；刷新会在后台运行，页面会显示进度。
+                        本地缓存用于生成严格 4433、每日候选和后续基金分析；刷新会优先处理 4433、缺失和过期数据，页面会显示进度。
                     </p>
                 </div>
                 <a id="fund-cache-refresh-link" class="btn-small waves-effect waves-light blue-grey" href="{{ .HostURL }}/fund/cache/refresh">
@@ -149,7 +149,7 @@
                 {{ else if ne .FundCacheRefresh.FinishedAt "--" }}
                 上次刷新完成:{{ .FundCacheRefresh.FinishedAt }}，缓存 {{ .FundCacheRefresh.FundCount }} 只基金。
                 {{ else }}
-                当前本地全量缓存为 {{ .AllFundCount }} 只；如果为 0，建议先刷新一次。
+                当前本地基金缓存为 {{ .AllFundCount }} 只；如果为 0，建议先刷新一次。
                 {{ end }}
             </p>
         </div>

@@ -3,6 +3,7 @@
 package routes
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -108,6 +109,7 @@ func FundIndex(c *gin.Context) {
 		return
 	}
 	p.ApplyTypeSelection(c.QueryArray("type"))
+	maybeStartIdleFundCacheRefresh(context.Background())
 
 	display := resolveFund4433Display(c, false)
 	cacheRefresh := currentFundCacheRefreshMeta()

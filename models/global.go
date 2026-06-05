@@ -43,6 +43,8 @@ var (
 	Fund4433ListFilename = "./fund_4433_list.json"
 	// Fund4433RecommendationFilename 4433每日候选基金列表数据文件
 	Fund4433RecommendationFilename = "./fund_4433_recommendation.json"
+	// FundDetailRefreshMetaFilename records per-fund detail refresh timestamps.
+	FundDetailRefreshMetaFilename = "./fund_detail_refresh_meta.json"
 	// IndustryListFilename 行业列表数据文件
 	IndustryListFilename = "./industry_list.json"
 	// FundTypeListFilename 基金类型数据文件

@@ -189,6 +189,8 @@ func TestFundCacheRefreshStatusUsesCurrentCacheWhenIdle(t *testing.T) {
 	require.Equal(t, http.StatusOK, recorder.Code)
 	body := recorder.Body.String()
 	require.Contains(t, body, `"refreshing":false`)
+	require.Contains(t, body, `"planned":0`)
+	require.Contains(t, body, `"priority_4433_count":0`)
 	require.Contains(t, body, `"fund_count":1`)
 	require.Contains(t, body, `"fund_4433_count":1`)
 	require.Contains(t, body, `"recommendation_count":1`)
@@ -203,6 +205,9 @@ func resetFundCacheRefreshStateForTest() {
 	fundCacheRefreshFinishedAt = time.Time{}
 	fundCacheRefreshProgress = core.FundCacheRefreshProgress{}
 	fundCacheRefreshLastError = ""
+	fundCacheIdleRefreshMu.Lock()
+	defer fundCacheIdleRefreshMu.Unlock()
+	fundCacheIdleRefreshLastAttempt = time.Time{}
 }
 
 func buildFundIndexRecommendationFund(code string, name string) *models.Fund {

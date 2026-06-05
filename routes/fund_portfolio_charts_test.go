@@ -98,6 +98,36 @@ func TestBuildFundPortfolioChartDataJSON(t *testing.T) {
 	require.Len(t, payload.Comparisons, 2)
 }
 
+func TestFundPortfolioChartDataHasDataWithoutExposure(t *testing.T) {
+	advices := []core.FundPortfolioAdvice{
+		buildChartAdvice("000001", "候选基金", models.FundPortfolioStatusWatch, 75, 0, 0, 8, 16, 1.2, 35),
+	}
+	payload := buildFundPortfolioChartData(
+		core.FundPortfolioExposureReport{},
+		advices,
+		models.FundPortfolioHistory{},
+		nil,
+		fundPortfolioCorrelationRefreshData{},
+	)
+
+	require.True(t, payload.HasData())
+	require.Empty(t, payload.Themes)
+	require.Empty(t, payload.Stocks)
+	require.Len(t, payload.RiskReturns, 1)
+}
+
+func TestFundPortfolioChartDataHasNoDataWhenEmpty(t *testing.T) {
+	payload := buildFundPortfolioChartData(
+		core.FundPortfolioExposureReport{},
+		nil,
+		models.FundPortfolioHistory{},
+		nil,
+		fundPortfolioCorrelationRefreshData{},
+	)
+
+	require.False(t, payload.HasData())
+}
+
 func buildChartAdvice(
 	code string,
 	name string,

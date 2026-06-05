@@ -124,6 +124,16 @@ func buildFundPortfolioChartDataJSON(
 	correlationSources []fundPortfolioCorrelationSource,
 	correlationRefresh fundPortfolioCorrelationRefreshData,
 ) template.JS {
+	return marshalFundPortfolioChartDataJSON(buildFundPortfolioChartData(report, advices, history, correlationSources, correlationRefresh))
+}
+
+func buildFundPortfolioChartData(
+	report core.FundPortfolioExposureReport,
+	advices []core.FundPortfolioAdvice,
+	history models.FundPortfolioHistory,
+	correlationSources []fundPortfolioCorrelationSource,
+	correlationRefresh fundPortfolioCorrelationRefreshData,
+) fundPortfolioChartData {
 	payload := fundPortfolioChartData{
 		StockConcentration: buildStockConcentration(report.StockExposures),
 		History:            buildHistoryChartPoints(history),
@@ -177,10 +187,26 @@ func buildFundPortfolioChartDataJSON(
 	}
 	payload.RiskReturns = buildRiskReturnChartPoints(advices)
 	payload.Comparisons = buildComparisonChartPoints(advices)
+	return payload
+}
 
+func marshalFundPortfolioChartDataJSON(payload fundPortfolioChartData) template.JS {
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return template.JS("{}")
 	}
 	return template.JS(raw)
+}
+
+func (d fundPortfolioChartData) HasData() bool {
+	return len(d.Themes) > 0 ||
+		len(d.ThemeSources) > 0 ||
+		len(d.Stocks) > 0 ||
+		len(d.RiskReturns) > 0 ||
+		len(d.History) > 0 ||
+		len(d.NAVTrend.Series) > 0 ||
+		len(d.Correlation.Labels) > 0 ||
+		len(d.Correlation.Points) > 0 ||
+		d.CorrelationRefresh.Needed ||
+		len(d.Comparisons) > 0
 }

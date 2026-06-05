@@ -28,6 +28,12 @@ env = "localhost"
     # Local user data. This file is intentionally ignored by git via *.json.
     filename = "./fund_portfolio.json"
 
+########## local fund cache refresh
+[fund_cache]
+    idle_refresh_enabled = true
+    priority_batch_size = 160
+    idle_refresh_cooldown_minutes = 30
+
 
 ########## server 相关配置
 [server]

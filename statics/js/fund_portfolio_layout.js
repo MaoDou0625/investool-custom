@@ -98,6 +98,9 @@
       if (activeTarget === "portfolio-analysis") {
         window.requestAnimationFrame(resizePortfolioCharts);
       }
+      window.dispatchEvent(new CustomEvent("fundPortfolioPageChanged", {
+        detail: { target: activeTarget },
+      }));
     }
 
     links.forEach(function (link) {

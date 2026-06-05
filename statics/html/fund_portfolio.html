@@ -18,7 +18,7 @@
         <aside class="fund-portfolio-sidebar">
             <nav class="fund-portfolio-side-nav" aria-label="我的基金板块导航">
                 <a href="#portfolio-overview" data-portfolio-nav="portfolio-overview"><i class="material-icons">dashboard</i><span>组合总览</span></a>
-                {{ if .ExposureReport.HasData }}<a href="#portfolio-analysis" data-portfolio-nav="portfolio-analysis"><i class="material-icons">insights</i><span>图表分析</span></a>{{ end }}
+                {{ if .HasChartData }}<a href="#portfolio-analysis" data-portfolio-nav="portfolio-analysis"><i class="material-icons">insights</i><span>图表分析</span></a>{{ end }}
                 <a href="#portfolio-owned" data-portfolio-nav="portfolio-owned"><i class="material-icons">account_balance_wallet</i><span>已持有</span></a>
                 <a href="#portfolio-watch" data-portfolio-nav="portfolio-watch"><i class="material-icons">visibility</i><span>观察池</span></a>
                 <a href="#portfolio-add" data-portfolio-nav="portfolio-add"><i class="material-icons">add_circle_outline</i><span>添加/导入</span></a>
@@ -49,7 +49,7 @@
                         <strong>{{ .PortfolioFile }}</strong>
                     </div>
                 </div>
-                {{ if .ExposureReport.HasData }}
+                {{ if .HasChartData }}
                 <p class="grey-text">当前组合已经生成主题、重仓股、风险收益、历史收益和替代基金对比图。左侧导航可以直接切换到对应板块。</p>
                 {{ else }}
                 <p class="grey-text">添加已持有基金后，会在这里汇总组合暴露、操作建议和持仓分析。</p>
@@ -199,7 +199,7 @@
 
     <div class="divider"></div>
 
-    {{ if .ExposureReport.HasData }}
+    {{ if .HasChartData }}
     <div id="portfolio-analysis" class="section fund-portfolio-section" data-portfolio-page="portfolio-analysis">
         <h4>主题暴露与持仓分析</h4>
         <p class="grey-text">
@@ -210,7 +210,7 @@
         <script>
             window.fundPortfolioChartData = {{ .ExposureChartData }};
         </script>
-        <script defer src="{{ .HostURL }}/statics/js/fund_portfolio_charts.js?v=portfolio-chart-v9"></script>
+        <script defer src="{{ .HostURL }}/statics/js/fund_portfolio_charts.js?v=portfolio-chart-v10"></script>
 
         <div class="fund-portfolio-chart-group">
             <div class="row">
@@ -404,5 +404,5 @@
         </div>
     </div>
 </div>
-<script defer src="{{ .HostURL }}/statics/js/fund_portfolio_layout.js?v=portfolio-layout-v3"></script>
+<script defer src="{{ .HostURL }}/statics/js/fund_portfolio_layout.js?v=portfolio-layout-v4"></script>
 {{ template "footer" . }}
