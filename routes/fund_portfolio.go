@@ -96,11 +96,24 @@ func renderFundPortfolioPage(c *gin.Context, message string, pageErr string, scr
 	exposureReport := buildFundPortfolioExposureReport(c, portfolio, funds, pageErr)
 	allAdvices := core.EvaluateFundPortfolio(c, portfolio.Items, funds, holderStructures)
 	ownedAdvices, watchAdvices := splitFundPortfolioAdvices(allAdvices)
-	portfolioHistory, historyWarnings := loadAndUpdateFundPortfolioHistory(allAdvices)
+	portfolioHistory, historyWarnings := loadAndUpdateFundPortfolioHistory(ownedAdvices)
 	exposureReport.Warnings = append(exposureReport.Warnings, historyWarnings...)
-	correlationSources, correlationRefresh, correlationWarnings := loadFundPortfolioCorrelationSources(allAdvices, time.Now())
-	exposureReport.Warnings = append(exposureReport.Warnings, correlationWarnings...)
-	chartData := buildFundPortfolioChartData(exposureReport, allAdvices, portfolioHistory, correlationSources, correlationRefresh)
+	now := time.Now()
+	ownedCorrelationSources, ownedCorrelationRefresh, ownedCorrelationWarnings := loadFundPortfolioCorrelationSources(ownedAdvices, now)
+	allCorrelationSources, allCorrelationRefresh, allCorrelationWarnings := loadFundPortfolioCorrelationSources(allAdvices, now)
+	exposureReport.Warnings = append(exposureReport.Warnings, ownedCorrelationWarnings...)
+	exposureReport.Warnings = append(exposureReport.Warnings, allCorrelationWarnings...)
+	chartData := buildGroupedFundPortfolioChartData(
+		exposureReport,
+		ownedAdvices,
+		watchAdvices,
+		allAdvices,
+		portfolioHistory,
+		ownedCorrelationSources,
+		allCorrelationSources,
+		ownedCorrelationRefresh,
+		allCorrelationRefresh,
+	)
 
 	data := fundPortfolioViewData{
 		Env:               viper.GetString("env"),

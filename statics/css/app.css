@@ -470,7 +470,43 @@ main.container:has(#fund_portfolio_tiantian_content) {
 .fund-portfolio-chart-panel h5 {
   font-size: 18px;
   font-weight: 500;
-  margin-top: 0;
+  margin: 0 0 8px;
+}
+
+.fund-chart-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 34px;
+  margin: 0 0 10px;
+}
+
+.fund-chart-segment {
+  background: #ffffff;
+  border: 1px solid #cfd8dc;
+  border-radius: 6px;
+  color: #455a64;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  min-height: 32px;
+  padding: 0 12px;
+}
+
+.fund-chart-segment.is-active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.fund-chart-toggle {
+  align-items: center;
+  color: #455a64;
+  display: inline-flex;
+  font-size: 13px;
+  gap: 8px;
+  min-height: 32px;
 }
 
 .fund-portfolio-chart {

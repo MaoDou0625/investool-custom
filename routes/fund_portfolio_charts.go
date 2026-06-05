@@ -9,17 +9,20 @@ import (
 )
 
 type fundPortfolioChartData struct {
-	Themes             []fundPortfolioThemeChartPoint        `json:"themes"`
-	ThemeSources       []fundPortfolioThemeSourceChartPoint  `json:"themeSources"`
-	Stocks             []fundPortfolioStockChartPoint        `json:"stocks"`
-	StockConcentration fundPortfolioStockConcentration       `json:"stockConcentration"`
-	RiskReturns        []fundPortfolioRiskReturnChartPoint   `json:"riskReturns"`
-	History            []fundPortfolioHistoryChartPoint      `json:"history"`
-	NAVTrend           fundPortfolioNAVTrendChartData        `json:"navTrend"`
-	Correlation        fundPortfolioCorrelationChartData     `json:"correlation"`
-	CorrelationRefresh fundPortfolioCorrelationRefreshData   `json:"correlationRefresh"`
-	Comparisons        []fundPortfolioComparisonChartPoint   `json:"comparisons"`
-	ComparisonMetrics  []fundPortfolioComparisonMetricConfig `json:"comparisonMetrics"`
+	Themes                   []fundPortfolioThemeChartPoint        `json:"themes"`
+	ThemeSources             []fundPortfolioThemeSourceChartPoint  `json:"themeSources"`
+	Stocks                   []fundPortfolioStockChartPoint        `json:"stocks"`
+	StockConcentration       fundPortfolioStockConcentration       `json:"stockConcentration"`
+	RiskReturns              []fundPortfolioRiskReturnChartPoint   `json:"riskReturns"`
+	RiskReturnGroups         fundPortfolioRiskReturnChartGroups    `json:"riskReturnGroups"`
+	History                  []fundPortfolioHistoryChartPoint      `json:"history"`
+	NAVTrend                 fundPortfolioNAVTrendChartData        `json:"navTrend"`
+	Correlation              fundPortfolioCorrelationChartData     `json:"correlation"`
+	CorrelationGroups        fundPortfolioCorrelationChartGroups   `json:"correlationGroups"`
+	CorrelationRefresh       fundPortfolioCorrelationRefreshData   `json:"correlationRefresh"`
+	CorrelationRefreshGroups fundPortfolioCorrelationRefreshGroups `json:"correlationRefreshGroups"`
+	Comparisons              []fundPortfolioComparisonChartPoint   `json:"comparisons"`
+	ComparisonMetrics        []fundPortfolioComparisonMetricConfig `json:"comparisonMetrics"`
 }
 
 type fundPortfolioThemeChartPoint struct {
@@ -203,10 +206,17 @@ func (d fundPortfolioChartData) HasData() bool {
 		len(d.ThemeSources) > 0 ||
 		len(d.Stocks) > 0 ||
 		len(d.RiskReturns) > 0 ||
+		len(d.RiskReturnGroups.Owned) > 0 ||
+		len(d.RiskReturnGroups.Watch) > 0 ||
+		len(d.RiskReturnGroups.All) > 0 ||
 		len(d.History) > 0 ||
 		len(d.NAVTrend.Series) > 0 ||
 		len(d.Correlation.Labels) > 0 ||
 		len(d.Correlation.Points) > 0 ||
+		len(d.CorrelationGroups.Owned.Labels) > 0 ||
+		len(d.CorrelationGroups.All.Labels) > 0 ||
 		d.CorrelationRefresh.Needed ||
+		d.CorrelationRefreshGroups.Owned.Needed ||
+		d.CorrelationRefreshGroups.All.Needed ||
 		len(d.Comparisons) > 0
 }

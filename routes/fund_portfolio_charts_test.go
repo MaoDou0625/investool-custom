@@ -128,6 +128,54 @@ func TestFundPortfolioChartDataHasNoDataWhenEmpty(t *testing.T) {
 	require.False(t, payload.HasData())
 }
 
+func TestGroupedFundPortfolioChartDataDefaultsAnalysisToOwned(t *testing.T) {
+	ownedAdvices := []core.FundPortfolioAdvice{
+		buildChartAdvice("001407", "景顺长城沪港深精选股票A", models.FundPortfolioStatusOwned, 72, 173.52, 74.3, 8, 18, 1.2, 35),
+		buildChartAdvice("009239", "华泰柏瑞中证科技100ETF联接C", models.FundPortfolioStatusOwned, 68, 59.98, 25.7, 6, 16, 1.1, 30),
+	}
+	watchAdvices := []core.FundPortfolioAdvice{
+		buildChartAdvice("002207", "前海开源金银珠宝混合C", models.FundPortfolioStatusWatch, 70, 1246.3, 0, 12, 18, 1.1, 35),
+	}
+	allAdvices := append(append([]core.FundPortfolioAdvice{}, ownedAdvices...), watchAdvices...)
+	ownedSources := []fundPortfolioCorrelationSource{
+		buildChartCorrelationSource("001407", "景顺长城沪港深精选股票A", []float64{1.00, 1.02, 1.01, 1.04, 1.06, 1.05, 1.08, 1.09, 1.10}),
+		buildChartCorrelationSource("009239", "华泰柏瑞中证科技100ETF联接C", []float64{1.00, 1.01, 1.03, 1.02, 1.05, 1.06, 1.08, 1.07, 1.09}),
+	}
+	allSources := append(append([]fundPortfolioCorrelationSource{}, ownedSources...),
+		buildChartCorrelationSource("002207", "前海开源金银珠宝混合C", []float64{1.00, 0.99, 1.00, 0.98, 1.01, 1.02, 1.03, 1.02, 1.04}),
+	)
+
+	payload := buildGroupedFundPortfolioChartData(
+		core.FundPortfolioExposureReport{},
+		ownedAdvices,
+		watchAdvices,
+		allAdvices,
+		models.FundPortfolioHistory{},
+		ownedSources,
+		allSources,
+		fundPortfolioCorrelationRefreshData{},
+		fundPortfolioCorrelationRefreshData{Needed: true},
+	)
+
+	require.ElementsMatch(t, []string{"001407", "009239"}, riskReturnCodes(payload.RiskReturns))
+	require.ElementsMatch(t, []string{"001407", "009239"}, riskReturnCodes(payload.RiskReturnGroups.Owned))
+	require.ElementsMatch(t, []string{"002207"}, riskReturnCodes(payload.RiskReturnGroups.Watch))
+	require.ElementsMatch(t, []string{"001407", "009239", "002207"}, riskReturnCodes(payload.RiskReturnGroups.All))
+	require.Len(t, payload.NAVTrend.Series, 2)
+	require.Len(t, payload.Correlation.Labels, 2)
+	require.Len(t, payload.CorrelationGroups.All.Labels, 3)
+	require.False(t, payload.CorrelationRefresh.Needed)
+	require.True(t, payload.CorrelationRefreshGroups.All.Needed)
+}
+
+func riskReturnCodes(points []fundPortfolioRiskReturnChartPoint) []string {
+	codes := make([]string, 0, len(points))
+	for _, point := range points {
+		codes = append(codes, point.Code)
+	}
+	return codes
+}
+
 func buildChartAdvice(
 	code string,
 	name string,

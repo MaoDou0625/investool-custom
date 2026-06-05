@@ -23,6 +23,7 @@
     "#65a30d",
     "#9333ea",
   ];
+  var activeRiskReturnScope = "owned";
 
   function onReady(fn) {
     if (document.readyState === "loading") {
@@ -127,6 +128,39 @@
       total += Number(row[fieldName] || 0);
     });
     return total;
+  }
+
+  function riskReturnRowsForScope(data, scope) {
+    var groups = data.riskReturnGroups || {};
+    if (Array.isArray(groups[scope])) {
+      return groups[scope];
+    }
+    if (scope === "owned") {
+      return data.riskReturns || [];
+    }
+    return [];
+  }
+
+  function updateRiskReturnScopeButtons(scope) {
+    var buttons = document.querySelectorAll("[data-risk-return-scope]");
+    Array.prototype.forEach.call(buttons, function (button) {
+      var active = button.getAttribute("data-risk-return-scope") === scope;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  }
+
+  function bindRiskReturnScopeControls(data) {
+    var buttons = document.querySelectorAll("[data-risk-return-scope]");
+    Array.prototype.forEach.call(buttons, function (button) {
+      button.addEventListener("click", function () {
+        activeRiskReturnScope = button.getAttribute("data-risk-return-scope") || "owned";
+        updateRiskReturnScopeButtons(activeRiskReturnScope);
+        renderRiskReturn(data);
+        resizeChartsSoon();
+      });
+    });
+    updateRiskReturnScopeButtons(activeRiskReturnScope);
   }
 
   function uniqueThemeSources(rows) {
@@ -324,7 +358,7 @@
   }
 
   function renderRiskReturn(data) {
-    var rows = (data.riskReturns || []);
+    var rows = riskReturnRowsForScope(data, activeRiskReturnScope);
     if (rows.length === 0) {
       renderEmpty("fund-risk-return-chart", "暂无可用于风险收益散点的数据");
       return;
@@ -334,6 +368,7 @@
     if (!chart) {
       return;
     }
+    chart.clear();
     var maxAmount = Math.max(sumBy(rows, "currentAmount"), 1);
     var scatterData = rows.map(function (row) {
       return [row.risk, row.expectedReturn, row.currentAmount, row.name, row.code, row.status, row.action, row.score, row.currentWeight, row.returnLabel];
@@ -559,8 +594,65 @@
     ].join("");
   }
 
+  function currentCorrelationScope() {
+    var input = document.getElementById("fund-correlation-include-watch");
+    return input && input.checked ? "all" : "owned";
+  }
+
+  function correlationDataForScope(data, scope) {
+    var groups = data.correlationGroups || {};
+    if (groups[scope]) {
+      return groups[scope];
+    }
+    if (scope === "owned") {
+      return data.correlation || {};
+    }
+    return {};
+  }
+
+  function correlationRefreshForScope(data, scope) {
+    var groups = data.correlationRefreshGroups || {};
+    if (groups[scope]) {
+      return groups[scope];
+    }
+    if (scope === "owned") {
+      return data.correlationRefresh || {};
+    }
+    return {};
+  }
+
+  function setCorrelationDataForScope(data, scope, correlation, refresh) {
+    data.correlationGroups = data.correlationGroups || {};
+    data.correlationRefreshGroups = data.correlationRefreshGroups || {};
+    if (correlation) {
+      data.correlationGroups[scope] = correlation;
+      if (scope === "owned") {
+        data.correlation = correlation;
+      }
+    }
+    if (refresh) {
+      data.correlationRefreshGroups[scope] = refresh;
+      if (scope === "owned") {
+        data.correlationRefresh = refresh;
+      }
+    }
+  }
+
+  function bindCorrelationScopeControl(data) {
+    var input = document.getElementById("fund-correlation-include-watch");
+    if (!input) {
+      return;
+    }
+    input.addEventListener("change", function () {
+      var scope = currentCorrelationScope();
+      renderCorrelation(data, scope);
+      maybeRefreshCorrelation(data, scope);
+      resizeChartsSoon();
+    });
+  }
+
   function renderCorrelation(data) {
-    var correlation = data.correlation || {};
+    var correlation = correlationDataForScope(data, currentCorrelationScope());
     var labels = correlation.labels || [];
     var points = correlation.points || [];
     var pairs = buildCorrelationPairs(labels, points);
@@ -807,11 +899,13 @@
     box.classList.toggle("is-done", state === "done");
   }
 
-  function maybeRefreshCorrelation(data) {
-    var refresh = data.correlationRefresh || {};
-    if (!refresh.needed || !refresh.url || !window.fetch) {
+  function maybeRefreshCorrelation(data, scope) {
+    var activeScope = scope || currentCorrelationScope();
+    var refresh = correlationRefreshForScope(data, activeScope);
+    if (!refresh.needed || refresh.loading || !refresh.url || !window.fetch) {
       return;
     }
+    refresh.loading = true;
     setCorrelationRefreshStatus("loading", refresh.message || "正在刷新历史净值数据...");
     fetch(refresh.url, {
       method: "POST",
@@ -823,16 +917,18 @@
       }
       return resp.json();
     }).then(function (payload) {
+      refresh.loading = false;
       if (payload.correlation) {
-        data.correlation = payload.correlation;
-        renderCorrelation(data);
+        setCorrelationDataForScope(data, activeScope, payload.correlation, payload.refresh || {});
+        if (currentCorrelationScope() === activeScope) {
+          renderCorrelation(data);
+        }
       }
-      if (payload.navTrend) {
+      if (activeScope === "owned" && payload.navTrend) {
         data.navTrend = payload.navTrend;
         renderNAVTrend(data);
       }
       resizeCharts();
-      data.correlationRefresh = payload.refresh || {};
       var warnings = payload.warnings || [];
       if (warnings.length > 0) {
         setCorrelationRefreshStatus("error", warnings[0]);
@@ -843,6 +939,7 @@
         setCorrelationRefreshStatus("done", "");
       }, 2800);
     }).catch(function (err) {
+      refresh.loading = false;
       setCorrelationRefreshStatus("error", "历史净值刷新失败，继续使用本地缓存：" + err.message);
     });
   }
@@ -920,13 +1017,15 @@
       }
     });
 
+    bindRiskReturnScopeControls(data);
+    bindCorrelationScopeControl(data);
     renderThemeExposure(data);
     renderStockExposure(data);
     renderRiskReturn(data);
     renderHistory(data);
     renderNAVTrend(data);
     renderCorrelation(data);
-    maybeRefreshCorrelation(data);
+    maybeRefreshCorrelation(data, "owned");
     renderComparison(data);
     resizeChartsIfAnalysisVisible();
   });
