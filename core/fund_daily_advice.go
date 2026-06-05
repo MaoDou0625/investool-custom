@@ -17,21 +17,24 @@ type FundDailyAdviceConfig struct {
 	CashBufferWeight      float64
 	MaxSingleFundWeight   float64
 	TacticalWeight        float64
+	MaxDailyBuyWeight     float64
 	CandidateCount        int
 	MinCandidateScore     int
 	MinCoreCandidateScore int
 }
 
 type FundDailyAdviceReport struct {
-	GeneratedAt      time.Time
-	Config           FundDailyAdviceConfig
-	CurrentAmount    float64
-	InvestableAmount float64
-	CashRoom         float64
-	CashBufferAmount float64
-	PortfolioActions []FundDailyAction
-	CandidateActions []FundDailyAction
-	Warnings         []string
+	GeneratedAt           time.Time
+	Config                FundDailyAdviceConfig
+	CurrentAmount         float64
+	InvestableAmount      float64
+	CashRoom              float64
+	CashBufferAmount      float64
+	DailyBuyBudget        float64
+	DailyBuyBudgetReasons []string
+	PortfolioActions      []FundDailyAction
+	CandidateActions      []FundDailyAction
+	Warnings              []string
 }
 
 type FundDailyAction struct {
@@ -43,6 +46,9 @@ type FundDailyAction struct {
 	ActionLevel          string
 	StrategyScore        float64
 	StrategyTheme        string
+	TrendScore           float64
+	ThemeScore           float64
+	CorrelationScore     float64
 	MaxCorrelation       float64
 	HasCorrelation       bool
 	SuggestedAmount      float64
@@ -67,6 +73,7 @@ func DefaultFundDailyAdviceConfig() FundDailyAdviceConfig {
 		CashBufferWeight:      10,
 		MaxSingleFundWeight:   35,
 		TacticalWeight:        20,
+		MaxDailyBuyWeight:     10,
 		CandidateCount:        8,
 		MinCandidateScore:     68,
 		MinCoreCandidateScore: 75,
@@ -107,7 +114,7 @@ func BuildFundDailyAdviceReportWithEvidence(
 	}
 
 	report.PortfolioActions = buildDailyPortfolioActions(portfolioAdvices, report)
-	report.CandidateActions = buildDailyCandidateActions(ctx, candidateFunds, portfolioAdvices, candidateEvidence, report)
+	report.CandidateActions, report.DailyBuyBudget, report.DailyBuyBudgetReasons = buildDailyCandidateActions(ctx, candidateFunds, portfolioAdvices, candidateEvidence, report)
 	if report.CurrentAmount > config.MaxTotalAmount {
 		report.Warnings = append(report.Warnings, fmt.Sprintf("Current holding value %.2f exceeds configured max %.2f; new buys are disabled until exposure is reduced.", report.CurrentAmount, config.MaxTotalAmount))
 	}
@@ -132,7 +139,7 @@ func buildDailyPortfolioActions(advices []FundPortfolioAdvice, report FundDailyA
 	return actions
 }
 
-func buildDailyCandidateActions(ctx context.Context, funds models.FundList, portfolioAdvices []FundPortfolioAdvice, candidateEvidence map[string]FundDailyCandidateEvidence, report FundDailyAdviceReport) []FundDailyAction {
+func buildDailyCandidateActions(ctx context.Context, funds models.FundList, portfolioAdvices []FundPortfolioAdvice, candidateEvidence map[string]FundDailyCandidateEvidence, report FundDailyAdviceReport) ([]FundDailyAction, float64, []string) {
 	ownedOrWatched := map[string]struct{}{}
 	for _, advice := range portfolioAdvices {
 		ownedOrWatched[advice.Item.Code] = struct{}{}
@@ -189,7 +196,9 @@ func buildDailyCandidateActions(ctx context.Context, funds models.FundList, port
 	if len(actions) > report.Config.CandidateCount {
 		actions = actions[:report.Config.CandidateCount]
 	}
-	return actions
+	decision := chooseDailyCandidateBuyBudget(actions, report)
+	report.DailyBuyBudget = decision.Budget
+	return applyDailyCandidateBuyBudget(actions, report), decision.Budget, decision.Reasons
 }
 
 func dailyActionFromAdvice(advice FundPortfolioAdvice, source string, report FundDailyAdviceReport) FundDailyAction {
@@ -227,6 +236,9 @@ func dailyActionFromAdvice(advice FundPortfolioAdvice, source string, report Fun
 func applyFundDailyCandidateEvidence(action *FundDailyAction, evidence FundDailyCandidateEvidence) {
 	action.StrategyScore = evidence.StrategyScore
 	action.StrategyTheme = evidence.Theme
+	action.TrendScore = evidence.TrendScore
+	action.ThemeScore = evidence.ThemeScore
+	action.CorrelationScore = evidence.CorrelationScore
 	action.MaxCorrelation = evidence.MaxCorrelation
 	action.HasCorrelation = evidence.HasCorrelation
 	reasons := compactDailyReasons(evidence.Reasons, 4)
@@ -276,12 +288,12 @@ func candidateSuggestedAmount(action FundDailyAction, report FundDailyAdviceRepo
 		return 0
 	}
 	maxTacticalAmount := report.InvestableAmount * report.Config.TacticalWeight / 100
-	base := 200.0
+	base := 100.0
 	if action.ActionLevel == "buy" {
-		base = 400
+		base = 200
 	}
 	if action.Score >= 85 {
-		base += 200
+		base += 100
 	}
 	amount := minPositive(base, report.CashRoom, maxTacticalAmount)
 	return roundDailyAmount(amount)
@@ -306,6 +318,12 @@ func normalizeFundDailyAdviceConfig(config FundDailyAdviceConfig) FundDailyAdvic
 	}
 	if config.TacticalWeight <= 0 {
 		config.TacticalWeight = defaults.TacticalWeight
+	}
+	if config.MaxDailyBuyWeight <= 0 {
+		config.MaxDailyBuyWeight = defaults.MaxDailyBuyWeight
+	}
+	if config.MaxDailyBuyWeight > 50 {
+		config.MaxDailyBuyWeight = 50
 	}
 	if config.CandidateCount <= 0 {
 		config.CandidateCount = defaults.CandidateCount
@@ -403,6 +421,10 @@ func (r FundDailyAdviceReport) CurrentAmountText() string {
 
 func (r FundDailyAdviceReport) CashRoomText() string {
 	return fmt.Sprintf("%.2f", r.CashRoom)
+}
+
+func (r FundDailyAdviceReport) DailyBuyBudgetText() string {
+	return fmt.Sprintf("%.2f", r.DailyBuyBudget)
 }
 
 func (r FundDailyAdviceReport) InvestableAmountText() string {

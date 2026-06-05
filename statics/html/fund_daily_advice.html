@@ -15,15 +15,19 @@
 
     <form class="institution-filter" method="GET" action="{{ .HostURL }}/fund/daily-advice">
         <div class="row">
-            <div class="input-field col s12 m4">
+            <div class="input-field col s12 m3">
                 <input id="target_return" name="target_return" type="number" step="0.1" value="{{ printf "%.1f" .Config.TargetAnnualReturn }}">
                 <label for="target_return">目标年化收益率(%)</label>
             </div>
-            <div class="input-field col s12 m4">
+            <div class="input-field col s12 m3">
                 <input id="max_amount" name="max_amount" type="number" step="100" value="{{ printf "%.0f" .Config.MaxTotalAmount }}">
                 <label for="max_amount">总投入上限(元)</label>
             </div>
-            <div class="col s12 m4 institution-filter-actions">
+            <div class="input-field col s12 m3">
+                <input id="daily_buy_weight" name="daily_buy_weight" type="number" step="0.5" value="{{ printf "%.1f" .Config.MaxDailyBuyWeight }}">
+                <label for="daily_buy_weight">最高单日买入上限(%)</label>
+            </div>
+            <div class="col s12 m3 institution-filter-actions">
                 <button class="btn waves-effect waves-light red lighten-2" type="submit"><i class="material-icons left">calculate</i>重新计算</button>
             </div>
         </div>
@@ -34,6 +38,7 @@
         <div><span>当前持仓总值</span><strong>{{ .Report.CurrentAmountText }}</strong></div>
         <div><span>总投入上限</span><strong>{{ .Report.InvestableAmountText }}</strong></div>
         <div><span>可用加仓空间</span><strong>{{ .Report.CashRoomText }}</strong></div>
+        <div><span>AI建议今日买入预算</span><strong>{{ .Report.DailyBuyBudgetText }}</strong></div>
         <div><span>目标年化</span><strong>{{ printf "%.1f%%" .Config.TargetAnnualReturn }}</strong></div>
         <div><span>候选来源</span><strong>{{ .SourceName }} / {{ .SourceCount }}</strong></div>
     </div>
@@ -41,6 +46,15 @@
     <div class="section daily-advice-note">
         <p>该页面把 5% 年化目标作为筛选和仓位约束，不表示收益承诺。基金净值和排名会变化，实际操作前仍需要结合当天市场、交易费率和你的现金安排。</p>
     </div>
+
+    {{ if .Report.DailyBuyBudgetReasons }}
+    <div class="section daily-advice-note">
+        <h5>今日买入预算依据</h5>
+        {{ range .Report.DailyBuyBudgetReasons }}
+        <p>{{ . }}</p>
+        {{ end }}
+    </div>
+    {{ end }}
 
     <div class="section">
         <h4>当前持仓操作</h4>

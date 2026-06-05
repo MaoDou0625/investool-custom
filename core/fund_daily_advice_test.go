@@ -58,3 +58,37 @@ func TestBuildFundDailyAdviceReportFlagsWeakHolding(t *testing.T) {
 		t.Fatalf("expected negative sell amount, got %.2f", report.PortfolioActions[0].SuggestedAmount)
 	}
 }
+
+func TestBuildFundDailyAdviceReportCapsCandidateDailyBuyBudget(t *testing.T) {
+	report := BuildFundDailyAdviceReport(context.Background(), nil, models.FundList{
+		buildRecommendationFund("100001", "candidate one", 12),
+		buildRecommendationFund("100002", "candidate two", 12),
+		buildRecommendationFund("100003", "candidate three", 12),
+	}, FundDailyAdviceConfig{
+		TargetAnnualReturn:    5,
+		MaxTotalAmount:        5000,
+		CashBufferWeight:      10,
+		MaxSingleFundWeight:   35,
+		TacticalWeight:        20,
+		MaxDailyBuyWeight:     10,
+		CandidateCount:        3,
+		MinCandidateScore:     1,
+		MinCoreCandidateScore: 75,
+	})
+
+	if report.DailyBuyBudget <= 0 || report.DailyBuyBudget > 500 {
+		t.Fatalf("expected adaptive daily buy budget in (0, 500], got %.2f", report.DailyBuyBudget)
+	}
+	if len(report.CandidateActions) != 3 {
+		t.Fatalf("expected 3 candidate actions, got %d", len(report.CandidateActions))
+	}
+	if len(report.DailyBuyBudgetReasons) == 0 {
+		t.Fatalf("expected adaptive budget reasons")
+	}
+	if total := totalPositiveDailyCandidateAmount(report.CandidateActions); total > report.DailyBuyBudget {
+		t.Fatalf("candidate buy total %.2f exceeds daily buy budget %.2f", total, report.DailyBuyBudget)
+	}
+	if report.CandidateActions[1].SuggestedAmount != 0 || report.CandidateActions[2].SuggestedAmount != 0 {
+		t.Fatalf("expected later candidates to be observation-only after adaptive budget cap, got %.2f and %.2f", report.CandidateActions[1].SuggestedAmount, report.CandidateActions[2].SuggestedAmount)
+	}
+}

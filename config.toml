@@ -41,6 +41,7 @@ env = "localhost"
     cash_buffer_weight = 10.0
     max_single_fund_weight = 35.0
     tactical_weight = 20.0
+    max_daily_buy_weight = 10.0
     candidate_count = 8
     min_candidate_score = 68
     min_core_candidate_score = 75

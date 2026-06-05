@@ -77,6 +77,9 @@ func fundDailyAdviceConfigFromSettings(c *gin.Context) core.FundDailyAdviceConfi
 	if viper.IsSet("fund_advice.tactical_weight") {
 		config.TacticalWeight = viper.GetFloat64("fund_advice.tactical_weight")
 	}
+	if viper.IsSet("fund_advice.max_daily_buy_weight") {
+		config.MaxDailyBuyWeight = viper.GetFloat64("fund_advice.max_daily_buy_weight")
+	}
 	if viper.IsSet("fund_advice.candidate_count") {
 		config.CandidateCount = viper.GetInt("fund_advice.candidate_count")
 	}
@@ -95,6 +98,11 @@ func fundDailyAdviceConfigFromSettings(c *gin.Context) core.FundDailyAdviceConfi
 	if c.Query("max_amount") != "" {
 		if value, ok := parseQueryFloat(c.Query("max_amount")); ok {
 			config.MaxTotalAmount = value
+		}
+	}
+	if c.Query("daily_buy_weight") != "" {
+		if value, ok := parseQueryFloat(c.Query("daily_buy_weight")); ok {
+			config.MaxDailyBuyWeight = value
 		}
 	}
 	return config
