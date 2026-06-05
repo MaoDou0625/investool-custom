@@ -59,6 +59,10 @@ func splitFundShareClass(name string) (string, string) {
 		text  string
 		class string
 	}{
+		{"A人民币", fundShareClassA},
+		{"C人民币", fundShareClassC},
+		{"A美元", fundShareClassA},
+		{"C美元", fundShareClassC},
 		{"A类", fundShareClassA},
 		{"C类", fundShareClassC},
 		{"A份额", fundShareClassA},

@@ -135,15 +135,19 @@ type FundDailyAIDecision struct {
 	Provider       string                    `json:"provider,omitempty"`
 	Model          string                    `json:"model,omitempty"`
 	GeneratedAt    string                    `json:"generated_at,omitempty"`
+	Summary        string                    `json:"summary,omitempty"`
 	DailyBuyBudget float64                   `json:"daily_buy_budget"`
 	Actions        []FundDailyAIOutputAction `json:"actions,omitempty"`
 	Reasons        []string                  `json:"reasons,omitempty"`
+	RiskNotes      []string                  `json:"risk_notes,omitempty"`
 	Warnings       []string                  `json:"warnings,omitempty"`
 	Validated      bool                      `json:"validated"`
 }
 
 type FundDailyAIOutputAction struct {
 	Code     string  `json:"code"`
+	Name     string  `json:"name,omitempty"`
+	FundType string  `json:"fund_type,omitempty"`
 	Source   string  `json:"source"`
 	Action   string  `json:"action"`
 	Amount   float64 `json:"amount"`

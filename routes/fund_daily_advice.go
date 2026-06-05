@@ -67,6 +67,7 @@ func buildFundDailyAdviceBundle(c *gin.Context) fundDailyAdviceBundle {
 	report.Warnings = append(report.Warnings, navWarnings...)
 	report.Warnings = append(report.Warnings, selection.Warnings...)
 	report.AIContext = core.BuildFundDailyAIContext(report)
+	report.AIDecision = core.BuildFundDailyLocalDecision(report.AIContext)
 
 	return fundDailyAdviceBundle{
 		Report:      report,

@@ -4,11 +4,12 @@
         <div class="institution-title-row">
             <div>
                 <h2>每日基金操作建议</h2>
-                <p class="grey-text">以目标年化、总投入上限、现金缓冲和单基金上限作为约束，生成当天可执行的加仓、持有、减仓和候选买入建议。</p>
+                <p class="grey-text">基于目标年化、总投入上限、现金空间、候选趋势、相关性和风险指标，生成当天可执行的结构化建议。</p>
             </div>
             <div class="institution-actions">
                 <a class="btn-flat waves-effect" href="{{ .HostURL }}/fund"><i class="material-icons left">arrow_back</i>基金首页</a>
                 <a class="btn waves-effect waves-light blue-grey" href="{{ .HostURL }}/fund/institution"><i class="material-icons left">account_balance</i>机构持仓</a>
+                <a class="btn waves-effect waves-light teal" href="{{ .HostURL }}/fund/daily-advice/context.json" target="_blank"><i class="material-icons left">data_object</i>AI数据集</a>
             </div>
         </div>
     </div>
@@ -38,7 +39,8 @@
         <div><span>当前持仓总值</span><strong>{{ .Report.CurrentAmountText }}</strong></div>
         <div><span>总投入上限</span><strong>{{ .Report.InvestableAmountText }}</strong></div>
         <div><span>可用加仓空间</span><strong>{{ .Report.CashRoomText }}</strong></div>
-        <div><span>AI建议今日买入预算</span><strong>{{ .Report.DailyBuyBudgetText }}</strong></div>
+        <div><span>结构化建议买入</span><strong>{{ .Report.AIDecision.DailyBuyBudgetText }}</strong></div>
+        <div><span>程序参考预算</span><strong>{{ .Report.DailyBuyBudgetText }}</strong></div>
         <div><span>目标年化</span><strong>{{ printf "%.1f%%" .Config.TargetAnnualReturn }}</strong></div>
         <div><span>候选来源</span><strong>{{ .SourceName }} / {{ .SourceCount }}</strong></div>
     </div>
@@ -47,9 +49,71 @@
         <p>该页面把 5% 年化目标作为筛选和仓位约束，不表示收益承诺。基金净值和排名会变化，实际操作前仍需要结合当天市场、交易费率和你的现金安排。</p>
     </div>
 
+    {{ if .Report.AIDecision.Status }}
+    <div class="section daily-decision-panel">
+        <div class="daily-decision-header">
+            <div>
+                <h5>结构化建议</h5>
+                <p>{{ .Report.AIDecision.Summary }}</p>
+            </div>
+            <div class="daily-decision-meta">
+                <span>{{ .Report.AIDecision.Provider }}</span>
+                <strong>{{ .Report.AIDecision.GeneratedAt }}</strong>
+            </div>
+        </div>
+
+        {{ if .Report.AIDecision.Reasons }}
+        <div class="daily-decision-reasons">
+            {{ range .Report.AIDecision.Reasons }}
+            <p>{{ . }}</p>
+            {{ end }}
+        </div>
+        {{ end }}
+
+        {{ if .Report.AIDecision.Actions }}
+        <table class="striped responsive-table daily-decision-table">
+            <thead>
+                <tr>
+                    <th>基金</th>
+                    <th>来源</th>
+                    <th>动作</th>
+                    <th>金额</th>
+                    <th>理由</th>
+                    <th>风险提示</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Report.AIDecision.Actions }}
+                <tr>
+                    <td><strong>{{ .Code }}</strong><br>{{ .Name }}<br><span class="grey-text">{{ .FundType }}</span></td>
+                    <td>{{ .SourceLabel }}</td>
+                    <td><span class="badge {{ .BadgeClass }} white-text">{{ .ActionLabel }}</span></td>
+                    <td>{{ .AmountText }}</td>
+                    <td>{{ .Reason }}</td>
+                    <td>{{ .RiskNote }}</td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+        {{ end }}
+
+        {{ if .Report.AIDecision.RiskNotes }}
+        <div class="daily-decision-risk">
+            {{ range .Report.AIDecision.RiskNotes }}
+            <p>{{ . }}</p>
+            {{ end }}
+        </div>
+        {{ end }}
+
+        {{ range .Report.AIDecision.Warnings }}
+        <p class="orange-text text-darken-2">{{ . }}</p>
+        {{ end }}
+    </div>
+    {{ end }}
+
     {{ if .Report.DailyBuyBudgetReasons }}
     <div class="section daily-advice-note">
-        <h5>今日买入预算依据</h5>
+        <h5>程序参考预算依据</h5>
         {{ range .Report.DailyBuyBudgetReasons }}
         <p>{{ . }}</p>
         {{ end }}
@@ -96,7 +160,7 @@
     <div class="section">
         <h4>全市场候选基金</h4>
         {{ if eq (len .Report.CandidateActions) 0 }}
-        <p class="grey-text">当前没有候选基金通过筛选。可以先刷新本地基金缓存，或者降低目标收益/评分门槛。</p>
+        <p class="grey-text">当前没有候选基金通过筛选。可以先刷新本地基金缓存，或者降低目标收益、评分门槛。</p>
         {{ else }}
         <table class="striped responsive-table">
             <thead>

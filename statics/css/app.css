@@ -917,6 +917,67 @@ main.container:has(#fund_portfolio_tiantian_content) {
   margin: 0;
 }
 
+.daily-decision-panel {
+  border: 1px solid #dfe7ef;
+  border-radius: 6px;
+  padding: 14px;
+}
+
+.daily-decision-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.daily-decision-header h5 {
+  margin-top: 0;
+}
+
+.daily-decision-header p {
+  color: #455a64;
+  margin: 6px 0 0;
+}
+
+.daily-decision-meta {
+  color: #78909c;
+  min-width: 180px;
+  text-align: right;
+}
+
+.daily-decision-meta span,
+.daily-decision-meta strong {
+  display: block;
+}
+
+.daily-decision-reasons,
+.daily-decision-risk {
+  background: #f8fafc;
+  border-left: 4px solid #607d8b;
+  margin: 12px 0;
+  padding: 10px 12px;
+}
+
+.daily-decision-risk {
+  border-left-color: #ef6c00;
+}
+
+.daily-decision-reasons p,
+.daily-decision-risk p {
+  color: #455a64;
+  margin: 0 0 6px;
+}
+
+.daily-decision-reasons p:last-child,
+.daily-decision-risk p:last-child {
+  margin-bottom: 0;
+}
+
+.daily-decision-table td {
+  vertical-align: top;
+}
+
 @media only screen and (min-width: 1600px) {
   .fund-portfolio-page .fund-portfolio-chart-panel.col {
     width: 50%;
@@ -1042,9 +1103,14 @@ main.container:has(#fund_portfolio_tiantian_content) {
 
   .institution-title-row,
   .institution-actions,
-  .institution-filter-actions {
+  .institution-filter-actions,
+  .daily-decision-header {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .daily-decision-meta {
+    text-align: left;
   }
 
   .institution-actions .btn,
