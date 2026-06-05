@@ -1,6 +1,14 @@
 package core
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
+
+const (
+	fundDailyBudgetSourcePortfolio = "portfolio"
+	fundDailyBudgetSourceCandidate = "candidate"
+)
 
 type fundDailyBudgetDecision struct {
 	Budget     float64
@@ -9,7 +17,12 @@ type fundDailyBudgetDecision struct {
 	Reasons    []string
 }
 
-func maxDailyCandidateBuyBudget(report FundDailyAdviceReport) float64 {
+type fundDailyBudgetActionRef struct {
+	source string
+	action *FundDailyAction
+}
+
+func maxDailyBuyBudget(report FundDailyAdviceReport) float64 {
 	if report.CashRoom <= 0 || report.InvestableAmount <= 0 {
 		return 0
 	}
@@ -20,20 +33,21 @@ func maxDailyCandidateBuyBudget(report FundDailyAdviceReport) float64 {
 	return floorDailyAmount(budget)
 }
 
-func chooseDailyCandidateBuyBudget(actions []FundDailyAction, report FundDailyAdviceReport) fundDailyBudgetDecision {
-	maxBudget := maxDailyCandidateBuyBudget(report)
+func chooseDailyBuyBudget(portfolioActions []FundDailyAction, candidateActions []FundDailyAction, report FundDailyAdviceReport) fundDailyBudgetDecision {
+	maxBudget := maxDailyBuyBudget(report)
 	decision := fundDailyBudgetDecision{
 		MaxBudget: maxBudget,
 		Reasons:   []string{},
 	}
 	if maxBudget <= 0 {
-		decision.Reasons = append(decision.Reasons, "今日可用加仓空间不足，候选基金只保留观察。")
+		decision.Reasons = append(decision.Reasons, "今日可用加仓空间不足，所有买入操作只保留观察。")
 		return decision
 	}
 
-	signals := summarizeDailyBudgetSignals(actions, report)
+	refs := collectDailyBuyBudgetActionRefs(portfolioActions, candidateActions)
+	signals := summarizeDailyBudgetSignals(refs, report)
 	if signals.buyableCount == 0 {
-		decision.Reasons = append(decision.Reasons, "候选基金没有形成有效买入信号，今日不安排新增买入。")
+		decision.Reasons = append(decision.Reasons, "持有基金和候选基金都没有形成有效买入信号，今日不安排新增买入。")
 		return decision
 	}
 
@@ -90,59 +104,110 @@ func chooseDailyCandidateBuyBudget(actions []FundDailyAction, report FundDailyAd
 	decision.Confidence = clampFloat(confidence, 0.12, 1)
 	decision.Budget = floorDailyAmount(maxBudget * decision.Confidence)
 	decision.Reasons = append(decision.Reasons,
-		fmt.Sprintf("AI预算：最高可买 %.2f 元，数据信心 %.0f%%，今日建议买入 %.2f 元。", maxBudget, decision.Confidence*100, decision.Budget),
-		fmt.Sprintf("趋势/质量：候选平均数据评分 %.1f，综合评分 %.1f，趋势分 %.1f。", signals.avgStrategyScore, signals.avgScore, signals.avgTrendScore),
+		fmt.Sprintf("AI预算：最高可买 %.2f 元，数据信心 %.0f%%，今日总买入预算 %.2f 元。", maxBudget, decision.Confidence*100, decision.Budget),
+		fmt.Sprintf("买入信号：持有基金 %d 个，候选基金 %d 个，统一竞争今日预算。", signals.portfolioBuyCount, signals.candidateBuyCount),
+		fmt.Sprintf("趋势/质量：买入项平均数据评分 %.1f，综合评分 %.1f，趋势分 %.1f。", signals.avgStrategyScore, signals.avgScore, signals.avgTrendScore),
 		fmt.Sprintf("风险/分散：平均回撤 %.1f%%，波动 %.1f%%，分散化分 %.1f。", signals.avgDrawdown, signals.avgStddev, signals.avgCorrelationScore),
-		fmt.Sprintf("仓位：当前已投入约 %.1f%%，避免一次性把剩余仓位买满。", signals.currentWeight),
+		fmt.Sprintf("仓位：当前已投入约 %.1f%%，避免持有基金和候选基金合计一天买满。", signals.currentWeight),
 	)
 	return decision
 }
 
-func applyDailyCandidateBuyBudget(actions []FundDailyAction, report FundDailyAdviceReport) []FundDailyAction {
-	if len(actions) == 0 {
-		return actions
+func applyDailyBuyBudget(portfolioActions []FundDailyAction, candidateActions []FundDailyAction, report FundDailyAdviceReport) ([]FundDailyAction, []FundDailyAction) {
+	refs := collectDailyBuyBudgetActionRefs(portfolioActions, candidateActions)
+	if len(refs) == 0 {
+		return portfolioActions, candidateActions
 	}
+	sort.SliceStable(refs, func(i, j int) bool {
+		left := dailyBuyBudgetPriority(refs[i])
+		right := dailyBuyBudgetPriority(refs[j])
+		if left != right {
+			return left > right
+		}
+		return refs[i].action.Code < refs[j].action.Code
+	})
 
 	remaining := report.DailyBuyBudget
-	for idx := range actions {
-		if actions[idx].SuggestedAmount <= 0 {
+	for _, ref := range refs {
+		if ref.action.SuggestedAmount <= 0 {
 			continue
 		}
 		if remaining <= 0 {
-			markDailyCandidateBudgetExhausted(&actions[idx], report)
+			markDailyBuyBudgetExhausted(ref.action, ref.source, report)
 			continue
 		}
 
-		original := actions[idx].SuggestedAmount
+		original := ref.action.SuggestedAmount
 		allowed := original
 		if allowed > remaining {
 			allowed = floorDailyAmount(remaining)
 		}
 		if allowed <= 0 {
-			markDailyCandidateBudgetExhausted(&actions[idx], report)
+			markDailyBuyBudgetExhausted(ref.action, ref.source, report)
 			continue
 		}
 
-		actions[idx].SuggestedAmount = allowed
-		actions[idx].SuggestedWeight = amountToWeight(allowed, report.InvestableAmount)
+		ref.action.SuggestedAmount = allowed
+		ref.action.SuggestedWeight = amountToWeight(allowed, report.InvestableAmount)
 		remaining -= allowed
 		if allowed < original {
-			actions[idx].Reasons = prependUniqueDailyReason(actions[idx].Reasons, fmt.Sprintf("单日候选买入预算 %.2f 元，本基金本次压缩到 %.2f 元。", report.DailyBuyBudget, allowed))
+			ref.action.Reasons = prependUniqueDailyReason(ref.action.Reasons, fmt.Sprintf("今日总买入预算 %.2f 元，本基金本次压缩到 %.2f 元。", report.DailyBuyBudget, allowed))
 		}
 	}
-	return actions
+	return portfolioActions, candidateActions
 }
 
-func markDailyCandidateBudgetExhausted(action *FundDailyAction, report FundDailyAdviceReport) {
+func collectDailyBuyBudgetActionRefs(portfolioActions []FundDailyAction, candidateActions []FundDailyAction) []fundDailyBudgetActionRef {
+	refs := []fundDailyBudgetActionRef{}
+	for idx := range portfolioActions {
+		if portfolioActions[idx].SuggestedAmount > 0 {
+			refs = append(refs, fundDailyBudgetActionRef{
+				source: fundDailyBudgetSourcePortfolio,
+				action: &portfolioActions[idx],
+			})
+		}
+	}
+	for idx := range candidateActions {
+		if candidateActions[idx].SuggestedAmount > 0 {
+			refs = append(refs, fundDailyBudgetActionRef{
+				source: fundDailyBudgetSourceCandidate,
+				action: &candidateActions[idx],
+			})
+		}
+	}
+	return refs
+}
+
+func dailyBuyBudgetPriority(ref fundDailyBudgetActionRef) float64 {
+	action := ref.action
+	priority := effectiveDailyStrategyScore(*action)*0.65 + float64(action.Score)*0.35
+	if action.ActionLevel == "buy" {
+		priority += 5
+	}
+	if ref.source == fundDailyBudgetSourcePortfolio {
+		priority += 8
+	}
+	return priority
+}
+
+func markDailyBuyBudgetExhausted(action *FundDailyAction, source string, report FundDailyAdviceReport) {
 	action.SuggestedAmount = 0
 	action.SuggestedWeight = 0
+	if source == fundDailyBudgetSourcePortfolio {
+		action.Action = "今日暂不加仓"
+		action.ActionLevel = "hold"
+		action.Reasons = prependUniqueDailyReason(action.Reasons, fmt.Sprintf("今日总买入预算 %.2f 元已用完，本持有基金暂不加仓。", report.DailyBuyBudget))
+		return
+	}
 	action.Action = "观察，暂不买入"
 	action.ActionLevel = "watch"
-	action.Reasons = prependUniqueDailyReason(action.Reasons, fmt.Sprintf("单日候选买入预算 %.2f 元已用完，本基金仅保留观察。", report.DailyBuyBudget))
+	action.Reasons = prependUniqueDailyReason(action.Reasons, fmt.Sprintf("今日总买入预算 %.2f 元已用完，本候选基金仅保留观察。", report.DailyBuyBudget))
 }
 
 type fundDailyBudgetSignals struct {
 	buyableCount        int
+	portfolioBuyCount   int
+	candidateBuyCount   int
 	avgScore            float64
 	avgStrategyScore    float64
 	avgTrendScore       float64
@@ -153,18 +218,24 @@ type fundDailyBudgetSignals struct {
 	currentWeight       float64
 }
 
-func summarizeDailyBudgetSignals(actions []FundDailyAction, report FundDailyAdviceReport) fundDailyBudgetSignals {
+func summarizeDailyBudgetSignals(refs []fundDailyBudgetActionRef, report FundDailyAdviceReport) fundDailyBudgetSignals {
 	signals := fundDailyBudgetSignals{}
 	if report.InvestableAmount > 0 {
 		signals.currentWeight = report.CurrentAmount / report.InvestableAmount * 100
 	}
-	for _, action := range actions {
+	for _, ref := range refs {
+		action := ref.action
 		if action.SuggestedAmount <= 0 {
 			continue
 		}
 		signals.buyableCount++
+		if ref.source == fundDailyBudgetSourcePortfolio {
+			signals.portfolioBuyCount++
+		} else {
+			signals.candidateBuyCount++
+		}
 		signals.avgScore += float64(action.Score)
-		signals.avgStrategyScore += action.StrategyScore
+		signals.avgStrategyScore += effectiveDailyStrategyScore(*action)
 		signals.avgTrendScore += action.TrendScore
 		signals.avgCorrelationScore += action.CorrelationScore
 		signals.avgDrawdown += action.Drawdown
@@ -185,11 +256,20 @@ func summarizeDailyBudgetSignals(actions []FundDailyAction, report FundDailyAdvi
 	return signals
 }
 
-func totalPositiveDailyCandidateAmount(actions []FundDailyAction) float64 {
+func effectiveDailyStrategyScore(action FundDailyAction) float64 {
+	if action.StrategyScore > 0 {
+		return action.StrategyScore
+	}
+	return float64(action.Score)
+}
+
+func totalPositiveDailyBuyAmount(actionGroups ...[]FundDailyAction) float64 {
 	total := 0.0
-	for _, action := range actions {
-		if action.SuggestedAmount > 0 {
-			total += action.SuggestedAmount
+	for _, actions := range actionGroups {
+		for _, action := range actions {
+			if action.SuggestedAmount > 0 {
+				total += action.SuggestedAmount
+			}
 		}
 	}
 	return total

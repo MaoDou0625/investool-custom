@@ -114,7 +114,11 @@ func BuildFundDailyAdviceReportWithEvidence(
 	}
 
 	report.PortfolioActions = buildDailyPortfolioActions(portfolioAdvices, report)
-	report.CandidateActions, report.DailyBuyBudget, report.DailyBuyBudgetReasons = buildDailyCandidateActions(ctx, candidateFunds, portfolioAdvices, candidateEvidence, report)
+	report.CandidateActions = buildDailyCandidateActions(ctx, candidateFunds, portfolioAdvices, candidateEvidence, report)
+	decision := chooseDailyBuyBudget(report.PortfolioActions, report.CandidateActions, report)
+	report.DailyBuyBudget = decision.Budget
+	report.DailyBuyBudgetReasons = decision.Reasons
+	report.PortfolioActions, report.CandidateActions = applyDailyBuyBudget(report.PortfolioActions, report.CandidateActions, report)
 	if report.CurrentAmount > config.MaxTotalAmount {
 		report.Warnings = append(report.Warnings, fmt.Sprintf("Current holding value %.2f exceeds configured max %.2f; new buys are disabled until exposure is reduced.", report.CurrentAmount, config.MaxTotalAmount))
 	}
@@ -139,7 +143,7 @@ func buildDailyPortfolioActions(advices []FundPortfolioAdvice, report FundDailyA
 	return actions
 }
 
-func buildDailyCandidateActions(ctx context.Context, funds models.FundList, portfolioAdvices []FundPortfolioAdvice, candidateEvidence map[string]FundDailyCandidateEvidence, report FundDailyAdviceReport) ([]FundDailyAction, float64, []string) {
+func buildDailyCandidateActions(ctx context.Context, funds models.FundList, portfolioAdvices []FundPortfolioAdvice, candidateEvidence map[string]FundDailyCandidateEvidence, report FundDailyAdviceReport) []FundDailyAction {
 	ownedOrWatched := map[string]struct{}{}
 	for _, advice := range portfolioAdvices {
 		ownedOrWatched[advice.Item.Code] = struct{}{}
@@ -196,9 +200,7 @@ func buildDailyCandidateActions(ctx context.Context, funds models.FundList, port
 	if len(actions) > report.Config.CandidateCount {
 		actions = actions[:report.Config.CandidateCount]
 	}
-	decision := chooseDailyCandidateBuyBudget(actions, report)
-	report.DailyBuyBudget = decision.Budget
-	return applyDailyCandidateBuyBudget(actions, report), decision.Budget, decision.Reasons
+	return actions
 }
 
 func dailyActionFromAdvice(advice FundPortfolioAdvice, source string, report FundDailyAdviceReport) FundDailyAction {

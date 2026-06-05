@@ -85,10 +85,49 @@ func TestBuildFundDailyAdviceReportCapsCandidateDailyBuyBudget(t *testing.T) {
 	if len(report.DailyBuyBudgetReasons) == 0 {
 		t.Fatalf("expected adaptive budget reasons")
 	}
-	if total := totalPositiveDailyCandidateAmount(report.CandidateActions); total > report.DailyBuyBudget {
+	if total := totalPositiveDailyBuyAmount(report.CandidateActions); total > report.DailyBuyBudget {
 		t.Fatalf("candidate buy total %.2f exceeds daily buy budget %.2f", total, report.DailyBuyBudget)
 	}
-	if report.CandidateActions[1].SuggestedAmount != 0 || report.CandidateActions[2].SuggestedAmount != 0 {
-		t.Fatalf("expected later candidates to be observation-only after adaptive budget cap, got %.2f and %.2f", report.CandidateActions[1].SuggestedAmount, report.CandidateActions[2].SuggestedAmount)
+	if report.CandidateActions[2].SuggestedAmount != 0 {
+		t.Fatalf("expected last candidate to be observation-only after adaptive budget cap, got %.2f", report.CandidateActions[2].SuggestedAmount)
+	}
+}
+
+func TestBuildFundDailyAdviceReportCapsPortfolioAndCandidateBuysTogether(t *testing.T) {
+	report := BuildFundDailyAdviceReport(context.Background(), []FundPortfolioAdvice{
+		{
+			Item:                    models.FundPortfolioItem{Code: "000001", Status: models.FundPortfolioStatusOwned},
+			Score:                   86,
+			RiskLevel:               "中等",
+			HasPosition:             true,
+			CurrentAmount:           100,
+			CurrentWeight:           2,
+			RecommendedWeight:       35,
+			HasExpectedAnnualReturn: true,
+			ExpectedAnnualReturn:    8,
+		},
+	}, models.FundList{
+		buildRecommendationFund("100001", "candidate one", 12),
+	}, FundDailyAdviceConfig{
+		TargetAnnualReturn:    5,
+		MaxTotalAmount:        5000,
+		CashBufferWeight:      10,
+		MaxSingleFundWeight:   35,
+		TacticalWeight:        20,
+		MaxDailyBuyWeight:     2,
+		CandidateCount:        1,
+		MinCandidateScore:     1,
+		MinCoreCandidateScore: 75,
+	})
+
+	if report.DailyBuyBudget <= 0 || report.DailyBuyBudget > 100 {
+		t.Fatalf("expected adaptive daily buy budget in (0, 100], got %.2f", report.DailyBuyBudget)
+	}
+	total := totalPositiveDailyBuyAmount(report.PortfolioActions, report.CandidateActions)
+	if total > report.DailyBuyBudget {
+		t.Fatalf("combined buy total %.2f exceeds daily buy budget %.2f", total, report.DailyBuyBudget)
+	}
+	if report.PortfolioActions[0].SuggestedAmount > report.DailyBuyBudget {
+		t.Fatalf("portfolio buy %.2f exceeds daily buy budget %.2f", report.PortfolioActions[0].SuggestedAmount, report.DailyBuyBudget)
 	}
 }
