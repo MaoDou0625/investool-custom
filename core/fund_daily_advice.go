@@ -206,6 +206,23 @@ func buildDailyCandidateActions(ctx context.Context, funds models.FundList, port
 			Code:   fund.Code,
 			Status: models.FundPortfolioStatusWatch,
 		}, fund, eastmoney.FundHolderStructureResult{})
+		status := strings.TrimSpace(fund.SubscriptionStatus)
+		action := dailyActionFromAdvice(advice, "候选池", report)
+		if !fund.CanSubscribe() {
+			action.Action = "暂停申购，观察"
+			action.ActionLevel = "watch"
+			action.SuggestedAmount = 0
+			action.SuggestedWeight = 0
+			if status == "" {
+				status = "未读取到申购状态"
+			}
+			action.Warnings = append(action.Warnings, fmt.Sprintf("申购状态为“%s”，当前暂停申购，今日不建议加仓。", status))
+			if evidence, ok := candidateEvidence[fund.Code]; ok {
+				applyFundDailyCandidateEvidence(&action, evidence)
+			}
+			actions = append(actions, action)
+			continue
+		}
 		if advice.Score < report.Config.MinCandidateScore {
 			continue
 		}
@@ -367,6 +384,19 @@ func applyFundDailyCandidateEvidence(action *FundDailyAction, evidence FundDaily
 }
 
 func fillOwnedDailyAction(action *FundDailyAction, advice FundPortfolioAdvice, report FundDailyAdviceReport) {
+	if advice.Fund != nil && !advice.Fund.CanSubscribe() {
+		status := strings.TrimSpace(advice.Fund.SubscriptionStatus)
+		if status == "" {
+			status = "未读取到申购状态"
+		}
+		action.Action = "暂停申购，暂不加仓"
+		action.ActionLevel = "watch"
+		action.SuggestedAmount = 0
+		action.SuggestedWeight = 0
+		action.Warnings = append(action.Warnings, fmt.Sprintf("持仓基金申购状态为“%s”，当前暂停申购。", status))
+		return
+	}
+
 	maxSingleAmount := report.InvestableAmount * report.Config.MaxSingleFundWeight / 100
 	recommendedAmount := report.InvestableAmount * advice.RecommendedWeight / 100
 	if recommendedAmount > maxSingleAmount {

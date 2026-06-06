@@ -118,14 +118,20 @@ func SelectDailyAdviceCandidatesWithStrategy(
 	}
 
 	themeTrends := buildFundDailyThemeTrends(source)
-	scored := scoreFundDailyStrategyCandidates(ctx, source, portfolioAdvices, navCache, profile, themeTrends)
+	scored, subscriptionWarnings := scoreFundDailyStrategyCandidates(ctx, source, portfolioAdvices, navCache, profile, themeTrends)
+	if len(subscriptionWarnings) > 0 {
+		selection.Warnings = append(selection.Warnings, subscriptionWarnings...)
+	}
 	selected := selectDiverseFundDailyCandidates(scored, maxCount)
 	if len(selected) == 0 && len(allFunds) > 0 && len(fallback) > 0 {
 		selection.Warnings = append(selection.Warnings, "全量基金缓存没有生成可用候选，本次退回每日候选池重新评分。")
 		selection.SourceName = "每日候选基金兜底 + 趋势/相关性评分"
 		selection.SourceCount = len(fallback)
 		themeTrends = buildFundDailyThemeTrends(fallback)
-		scored = scoreFundDailyStrategyCandidates(ctx, fallback, portfolioAdvices, navCache, profile, themeTrends)
+		scored, subscriptionWarnings = scoreFundDailyStrategyCandidates(ctx, fallback, portfolioAdvices, navCache, profile, themeTrends)
+		if len(subscriptionWarnings) > 0 {
+			selection.Warnings = append(selection.Warnings, subscriptionWarnings...)
+		}
 		selected = selectDiverseFundDailyCandidates(scored, maxCount)
 	}
 
@@ -151,7 +157,7 @@ func scoreFundDailyStrategyCandidates(
 	navCache models.FundNAVHistoryCache,
 	profile fundDailyPortfolioProfile,
 	themeTrends map[string]fundDailyThemeTrend,
-) []fundDailyStrategyCandidateScore {
+) ([]fundDailyStrategyCandidateScore, []string) {
 	portfolioCodes := map[string]struct{}{}
 	for _, advice := range portfolioAdvices {
 		code := strings.TrimSpace(advice.Item.Code)
@@ -159,6 +165,7 @@ func scoreFundDailyStrategyCandidates(
 			portfolioCodes[code] = struct{}{}
 		}
 	}
+	subscriptionBlocked := map[string]string{}
 
 	scored := make([]fundDailyStrategyCandidateScore, 0, len(funds))
 	for _, fund := range funds {
@@ -167,6 +174,9 @@ func scoreFundDailyStrategyCandidates(
 		}
 		if _, exists := portfolioCodes[fund.Code]; exists {
 			continue
+		}
+		if !fund.CanSubscribe() {
+			subscriptionBlocked[fund.Code] = strings.TrimSpace(fund.SubscriptionStatus)
 		}
 		evidence, ok := scoreFundDailyStrategyCandidate(ctx, fund, navCache, profile, themeTrends)
 		if !ok {
@@ -187,7 +197,24 @@ func scoreFundDailyStrategyCandidates(
 		}
 		return scored[i].fund.Code < scored[j].fund.Code
 	})
-	return scored
+	return scored, buildFundDailySubscriptionWarningMessages(subscriptionBlocked)
+}
+
+func buildFundDailySubscriptionWarningMessages(blocked map[string]string) []string {
+	if len(blocked) == 0 {
+		return nil
+	}
+	items := make([]string, 0, len(blocked))
+	for code, status := range blocked {
+		if strings.TrimSpace(status) == "" {
+			status = "未读取到申购状态"
+		}
+		items = append(items, fmt.Sprintf("%s（%s）", code, status))
+	}
+	sort.Strings(items)
+	return []string{
+		fmt.Sprintf("以下候选基金当前非开放申购，今日建议仅观察不加仓：%s", strings.Join(items, "；")),
+	}
 }
 
 func scoreFundDailyStrategyCandidate(

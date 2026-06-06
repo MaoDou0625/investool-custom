@@ -46,6 +46,8 @@ type Fund struct {
 	DailyProfitRatio float64 `json:"daily_profit_ratio"`
 	// 净值日期
 	NavDate string `json:"nav_date"`
+	// 申购状态
+	SubscriptionStatus string `json:"subscription_status"`
 	// 定投状态
 	FixedInvestmentStatus string `json:"fixed_investment_status"`
 	// 波动率
@@ -375,11 +377,12 @@ func NewFund(ctx context.Context, efund *eastmoney.RespFundInfo) *Fund {
 		IndexName:        efund.Jjxq.Datas.Indexname,
 		TargetETFCode:    interfaceToString(efund.Jjcc.Datas.InverstPosition.Etfcode),
 		TargetETFName:    interfaceToString(efund.Jjcc.Datas.InverstPosition.Etfshortname),
-		Rate:             efund.Jjxq.Datas.Rate,
-		UnitNav:          interfaceToFloat64(ctx, efund.Jjxq.Datas.Dwjz),
-		AccumulatedNav:   interfaceToFloat64(ctx, efund.Jjxq.Datas.Ljjz),
-		DailyProfitRatio: interfaceToFloat64(ctx, efund.Jjxq.Datas.Rzdf),
-		NavDate:          efund.Jjxq.Datas.Currentdaymark,
+		Rate:              efund.Jjxq.Datas.Rate,
+		UnitNav:           interfaceToFloat64(ctx, efund.Jjxq.Datas.Dwjz),
+		AccumulatedNav:    interfaceToFloat64(ctx, efund.Jjxq.Datas.Ljjz),
+		DailyProfitRatio:  interfaceToFloat64(ctx, efund.Jjxq.Datas.Rzdf),
+		NavDate:           efund.Jjxq.Datas.Currentdaymark,
+		SubscriptionStatus: strings.TrimSpace(efund.Jjxq.Datas.Sgzt),
 		Stddev: fundStddev{
 			Year1:  stddev1,
 			Year3:  stddev3,
@@ -581,6 +584,13 @@ func NewFund(ctx context.Context, efund *eastmoney.RespFundInfo) *Fund {
 	}
 
 	return &fund
+}
+
+func (f Fund) CanSubscribe() bool {
+	if strings.TrimSpace(f.SubscriptionStatus) == "" {
+		return true
+	}
+	return strings.TrimSpace(f.SubscriptionStatus) == "开放申购"
 }
 
 // FundList list
@@ -846,3 +856,5 @@ func (f Fund) EstabYears(ctx context.Context) float64 {
 	}
 	return time.Now().Sub(date).Hours() / 24.0 / 365.0
 }
+
+
