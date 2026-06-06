@@ -62,6 +62,12 @@ type Fund struct {
 	Stocks []fundStock `json:"stocks"`
 	// 基金经理
 	Manager fundManager `json:"manager"`
+	// 机构持有人比例
+	InstitutionalHoldingRatio float64 `json:"institutional_holding_ratio"`
+	// 内部持有人比例
+	InternalHoldingRatio float64 `json:"internal_holding_ratio"`
+	// 持有人结构数据是否已采集
+	HasHolderStructure bool `json:"has_holder_structure"`
 	// 历史分红送配
 	HistoricalDividends []fundDividend `json:"historical_dividends"`
 	// 资产占比
@@ -369,19 +375,19 @@ func NewFund(ctx context.Context, efund *eastmoney.RespFundInfo) *Fund {
 	}
 
 	fund := Fund{
-		Code:             efund.Jjxq.Datas.Fcode,
-		Name:             efund.Jjxq.Datas.Shortname,
-		Type:             efund.Jjxq.Datas.Ftype,
-		EstablishedDate:  efund.Jjxq.Datas.Estabdate,
-		IndexCode:        efund.Jjxq.Datas.Indexcode,
-		IndexName:        efund.Jjxq.Datas.Indexname,
-		TargetETFCode:    interfaceToString(efund.Jjcc.Datas.InverstPosition.Etfcode),
-		TargetETFName:    interfaceToString(efund.Jjcc.Datas.InverstPosition.Etfshortname),
-		Rate:              efund.Jjxq.Datas.Rate,
-		UnitNav:           interfaceToFloat64(ctx, efund.Jjxq.Datas.Dwjz),
-		AccumulatedNav:    interfaceToFloat64(ctx, efund.Jjxq.Datas.Ljjz),
-		DailyProfitRatio:  interfaceToFloat64(ctx, efund.Jjxq.Datas.Rzdf),
-		NavDate:           efund.Jjxq.Datas.Currentdaymark,
+		Code:               efund.Jjxq.Datas.Fcode,
+		Name:               efund.Jjxq.Datas.Shortname,
+		Type:               efund.Jjxq.Datas.Ftype,
+		EstablishedDate:    efund.Jjxq.Datas.Estabdate,
+		IndexCode:          efund.Jjxq.Datas.Indexcode,
+		IndexName:          efund.Jjxq.Datas.Indexname,
+		TargetETFCode:      interfaceToString(efund.Jjcc.Datas.InverstPosition.Etfcode),
+		TargetETFName:      interfaceToString(efund.Jjcc.Datas.InverstPosition.Etfshortname),
+		Rate:               efund.Jjxq.Datas.Rate,
+		UnitNav:            interfaceToFloat64(ctx, efund.Jjxq.Datas.Dwjz),
+		AccumulatedNav:     interfaceToFloat64(ctx, efund.Jjxq.Datas.Ljjz),
+		DailyProfitRatio:   interfaceToFloat64(ctx, efund.Jjxq.Datas.Rzdf),
+		NavDate:            efund.Jjxq.Datas.Currentdaymark,
 		SubscriptionStatus: strings.TrimSpace(efund.Jjxq.Datas.Sgzt),
 		Stddev: fundStddev{
 			Year1:  stddev1,
@@ -856,5 +862,3 @@ func (f Fund) EstabYears(ctx context.Context) float64 {
 	}
 	return time.Now().Sub(date).Hours() / 24.0 / 365.0
 }
-
-

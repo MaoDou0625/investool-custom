@@ -75,7 +75,7 @@ func BuildFundCacheRefreshPlan(
 		}
 		seen[code] = struct{}{}
 
-		_, cached := cachedByCode[code]
+		cachedFund, cached := cachedByCode[code]
 		_, is4433 := strict4433Codes[code]
 		updatedAt := meta.LastUpdatedAt(code)
 		position := codePositions[code]
@@ -94,6 +94,14 @@ func BuildFundCacheRefreshPlan(
 				code:      code,
 				priority:  1,
 				kind:      FundCacheRefreshPriorityMissing,
+				updatedAt: updatedAt,
+				position:  position,
+			})
+		case cachedFund != nil && !cachedFund.HasHolderStructure:
+			candidates = append(candidates, fundCacheRefreshPlanCandidate{
+				code:      code,
+				priority:  2,
+				kind:      FundCacheRefreshPriorityStaleOther,
 				updatedAt: updatedAt,
 				position:  position,
 			})

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/axiaoxin-com/investool/datacenter/eastmoney"
 	"github.com/axiaoxin-com/investool/models"
 )
 
@@ -43,59 +42,61 @@ type FundDailyAdviceReport struct {
 }
 
 type FundDailyAction struct {
-	Code                 string
-	Name                 string
-	FundType             string
-	Source               string
-	IndexName            string
-	TargetETFCode        string
-	TargetETFName        string
-	Action               string
-	ActionLevel          string
-	StrategyScore        float64
-	StrategyTheme        string
-	TrendScore           float64
-	ThemeScore           float64
-	CorrelationScore     float64
-	MaxCorrelation       float64
-	HasCorrelation       bool
-	SuggestedAmount      float64
-	SuggestedWeight      float64
-	CurrentAmount        float64
-	CurrentWeight        float64
-	Score                int
-	RiskLevel            string
-	ExpectedAnnualReturn float64
-	HasExpectedReturn    bool
-	Drawdown             float64
-	Stddev               float64
-	Sharp                float64
-	NetAssetsScaleYi     float64
-	UnitNAV              float64
-	DailyProfitRatio     float64
-	Month1Return         float64
-	Month3Return         float64
-	Month6Return         float64
-	ThisYearReturn       float64
-	Year1Return          float64
-	Year3Return          float64
-	Year5Return          float64
-	Month1RankRatio      float64
-	Month3RankRatio      float64
-	Month6RankRatio      float64
-	ThisYearRankRatio    float64
-	Year1RankRatio       float64
-	ManagerName          string
-	ManagerWorkingYears  float64
-	ManagerManageYears   float64
-	ManagerManageReturn  float64
-	ManagerAnnualReturn  float64
-	AssetStock           string
-	AssetBond            string
-	AssetCash            string
-	TopStocks            []FundDailyTopHolding
-	Reasons              []string
-	Warnings             []string
+	Code                      string
+	Name                      string
+	FundType                  string
+	Source                    string
+	IndexName                 string
+	TargetETFCode             string
+	TargetETFName             string
+	Action                    string
+	ActionLevel               string
+	StrategyScore             float64
+	StrategyTheme             string
+	TrendScore                float64
+	ThemeScore                float64
+	CorrelationScore          float64
+	MaxCorrelation            float64
+	HasCorrelation            bool
+	InstitutionalHoldingRatio float64
+	InternalHoldingRatio      float64
+	SuggestedAmount           float64
+	SuggestedWeight           float64
+	CurrentAmount             float64
+	CurrentWeight             float64
+	Score                     int
+	RiskLevel                 string
+	ExpectedAnnualReturn      float64
+	HasExpectedReturn         bool
+	Drawdown                  float64
+	Stddev                    float64
+	Sharp                     float64
+	NetAssetsScaleYi          float64
+	UnitNAV                   float64
+	DailyProfitRatio          float64
+	Month1Return              float64
+	Month3Return              float64
+	Month6Return              float64
+	ThisYearReturn            float64
+	Year1Return               float64
+	Year3Return               float64
+	Year5Return               float64
+	Month1RankRatio           float64
+	Month3RankRatio           float64
+	Month6RankRatio           float64
+	ThisYearRankRatio         float64
+	Year1RankRatio            float64
+	ManagerName               string
+	ManagerWorkingYears       float64
+	ManagerManageYears        float64
+	ManagerManageReturn       float64
+	ManagerAnnualReturn       float64
+	AssetStock                string
+	AssetBond                 string
+	AssetCash                 string
+	TopStocks                 []FundDailyTopHolding
+	Reasons                   []string
+	Warnings                  []string
 }
 
 type FundDailyTopHolding struct {
@@ -205,7 +206,7 @@ func buildDailyCandidateActions(ctx context.Context, funds models.FundList, port
 		advice := EvaluateFundPortfolioItem(ctx, models.FundPortfolioItem{
 			Code:   fund.Code,
 			Status: models.FundPortfolioStatusWatch,
-		}, fund, eastmoney.FundHolderStructureResult{})
+		}, fund, fundHolderStructureFromFund(fund))
 		status := strings.TrimSpace(fund.SubscriptionStatus)
 		action := dailyActionFromAdvice(advice, "候选池", report)
 		if !fund.CanSubscribe() {
@@ -232,7 +233,7 @@ func buildDailyCandidateActions(ctx context.Context, funds models.FundList, port
 		if fund.MaxRetracement.Avg135 > 35 || fund.Stddev.Avg135 > 35 {
 			continue
 		}
-		action := dailyActionFromAdvice(advice, "候选基金", report)
+		action = dailyActionFromAdvice(advice, "候选基金", report)
 		if advice.Score >= report.Config.MinCoreCandidateScore && fund.MaxRetracement.Avg135 <= 25 {
 			action.Action = "候选核心买入"
 			action.ActionLevel = "buy"
@@ -310,6 +311,10 @@ func dailyActionFromAdvice(advice FundPortfolioAdvice, source string, report Fun
 	if advice.Fund != nil {
 		fillDailyFundActionMetrics(&action, advice.Fund)
 	}
+	if advice.HolderStructure.Latest != nil {
+		action.InstitutionalHoldingRatio = advice.HolderStructure.Latest.InstitutionalHoldingRatio
+		action.InternalHoldingRatio = advice.HolderStructure.Latest.InternalHoldingRatio
+	}
 	if action.Name == "" {
 		action.Name = advice.Item.Code
 	}
@@ -331,6 +336,8 @@ func fillDailyFundActionMetrics(action *FundDailyAction, fund *models.Fund) {
 	action.Drawdown = fund.MaxRetracement.Avg135
 	action.Stddev = fund.Stddev.Avg135
 	action.Sharp = fund.Sharp.Avg135
+	action.InstitutionalHoldingRatio = fund.InstitutionalHoldingRatio
+	action.InternalHoldingRatio = fund.InternalHoldingRatio
 	action.NetAssetsScaleYi = fund.NetAssetsScale / 100000000
 	action.UnitNAV = fund.UnitNav
 	action.DailyProfitRatio = fund.DailyProfitRatio

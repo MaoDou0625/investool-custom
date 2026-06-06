@@ -53,42 +53,44 @@ type FundDailyAIBudgetInput struct {
 }
 
 type FundDailyAIFund struct {
-	Code                 string                `json:"code"`
-	Name                 string                `json:"name"`
-	Source               string                `json:"source"`
-	FundType             string                `json:"fund_type"`
-	ProgramAction        string                `json:"program_action"`
-	ProgramActionLevel   string                `json:"program_action_level"`
-	SuggestedBuyCeiling  float64               `json:"suggested_buy_ceiling"`
-	SuggestedSellAmount  float64               `json:"suggested_sell_amount"`
-	CurrentAmount        float64               `json:"current_amount"`
-	CurrentWeight        float64               `json:"current_weight_percent"`
-	SuggestedWeight      float64               `json:"suggested_weight_percent"`
-	Score                int                   `json:"score"`
-	RiskLevel            string                `json:"risk_level"`
-	ExpectedAnnualReturn *float64              `json:"expected_annual_return_percent,omitempty"`
-	StrategyScore        float64               `json:"strategy_score"`
-	StrategyTheme        string                `json:"strategy_theme,omitempty"`
-	TrendScore           float64               `json:"trend_score"`
-	ThemeScore           float64               `json:"theme_score"`
-	CorrelationScore     float64               `json:"correlation_score"`
-	MaxCorrelation       *float64              `json:"max_correlation,omitempty"`
-	Drawdown             float64               `json:"drawdown_percent"`
-	Stddev               float64               `json:"stddev_percent"`
-	Sharp                float64               `json:"sharp"`
-	NetAssetsScaleYi     float64               `json:"net_assets_scale_yi"`
-	UnitNAV              float64               `json:"unit_nav"`
-	DailyProfitRatio     float64               `json:"daily_profit_ratio_percent"`
-	RecentReturns        FundDailyAIReturns    `json:"recent_returns"`
-	RankRatios           FundDailyAIRankRatios `json:"rank_ratios"`
-	Manager              FundDailyAIManager    `json:"manager"`
-	IndexName            string                `json:"index_name,omitempty"`
-	TargetETFCode        string                `json:"target_etf_code,omitempty"`
-	TargetETFName        string                `json:"target_etf_name,omitempty"`
-	Assets               FundDailyAIAssets     `json:"assets"`
-	TopStocks            []FundDailyTopHolding `json:"top_stocks,omitempty"`
-	Reasons              []string              `json:"reasons,omitempty"`
-	Warnings             []string              `json:"warnings,omitempty"`
+	Code                      string                `json:"code"`
+	Name                      string                `json:"name"`
+	Source                    string                `json:"source"`
+	FundType                  string                `json:"fund_type"`
+	ProgramAction             string                `json:"program_action"`
+	ProgramActionLevel        string                `json:"program_action_level"`
+	SuggestedBuyCeiling       float64               `json:"suggested_buy_ceiling"`
+	SuggestedSellAmount       float64               `json:"suggested_sell_amount"`
+	CurrentAmount             float64               `json:"current_amount"`
+	CurrentWeight             float64               `json:"current_weight_percent"`
+	SuggestedWeight           float64               `json:"suggested_weight_percent"`
+	Score                     int                   `json:"score"`
+	RiskLevel                 string                `json:"risk_level"`
+	ExpectedAnnualReturn      *float64              `json:"expected_annual_return_percent,omitempty"`
+	StrategyScore             float64               `json:"strategy_score"`
+	StrategyTheme             string                `json:"strategy_theme,omitempty"`
+	TrendScore                float64               `json:"trend_score"`
+	ThemeScore                float64               `json:"theme_score"`
+	CorrelationScore          float64               `json:"correlation_score"`
+	MaxCorrelation            *float64              `json:"max_correlation,omitempty"`
+	InstitutionalHoldingRatio float64               `json:"institutional_holding_ratio"`
+	InternalHoldingRatio      float64               `json:"internal_holding_ratio"`
+	Drawdown                  float64               `json:"drawdown_percent"`
+	Stddev                    float64               `json:"stddev_percent"`
+	Sharp                     float64               `json:"sharp"`
+	NetAssetsScaleYi          float64               `json:"net_assets_scale_yi"`
+	UnitNAV                   float64               `json:"unit_nav"`
+	DailyProfitRatio          float64               `json:"daily_profit_ratio_percent"`
+	RecentReturns             FundDailyAIReturns    `json:"recent_returns"`
+	RankRatios                FundDailyAIRankRatios `json:"rank_ratios"`
+	Manager                   FundDailyAIManager    `json:"manager"`
+	IndexName                 string                `json:"index_name,omitempty"`
+	TargetETFCode             string                `json:"target_etf_code,omitempty"`
+	TargetETFName             string                `json:"target_etf_name,omitempty"`
+	Assets                    FundDailyAIAssets     `json:"assets"`
+	TopStocks                 []FundDailyTopHolding `json:"top_stocks,omitempty"`
+	Reasons                   []string              `json:"reasons,omitempty"`
+	Warnings                  []string              `json:"warnings,omitempty"`
 }
 
 type FundDailyAIReturns struct {
@@ -236,28 +238,30 @@ func buildFundDailyAIFunds(actions []FundDailyAction, source string) []FundDaily
 
 func fundDailyAIFundFromAction(action FundDailyAction, source string) FundDailyAIFund {
 	fund := FundDailyAIFund{
-		Code:               action.Code,
-		Name:               action.Name,
-		Source:             source,
-		FundType:           action.FundType,
-		ProgramAction:      action.Action,
-		ProgramActionLevel: action.ActionLevel,
-		CurrentAmount:      action.CurrentAmount,
-		CurrentWeight:      action.CurrentWeight,
-		SuggestedWeight:    action.SuggestedWeight,
-		Score:              action.Score,
-		RiskLevel:          action.RiskLevel,
-		StrategyScore:      effectiveDailyStrategyScore(action),
-		StrategyTheme:      action.StrategyTheme,
-		TrendScore:         action.TrendScore,
-		ThemeScore:         action.ThemeScore,
-		CorrelationScore:   action.CorrelationScore,
-		Drawdown:           action.Drawdown,
-		Stddev:             action.Stddev,
-		Sharp:              action.Sharp,
-		NetAssetsScaleYi:   action.NetAssetsScaleYi,
-		UnitNAV:            action.UnitNAV,
-		DailyProfitRatio:   action.DailyProfitRatio,
+		Code:                      action.Code,
+		Name:                      action.Name,
+		Source:                    source,
+		FundType:                  action.FundType,
+		ProgramAction:             action.Action,
+		ProgramActionLevel:        action.ActionLevel,
+		CurrentAmount:             action.CurrentAmount,
+		CurrentWeight:             action.CurrentWeight,
+		SuggestedWeight:           action.SuggestedWeight,
+		Score:                     action.Score,
+		RiskLevel:                 action.RiskLevel,
+		StrategyScore:             effectiveDailyStrategyScore(action),
+		StrategyTheme:             action.StrategyTheme,
+		TrendScore:                action.TrendScore,
+		ThemeScore:                action.ThemeScore,
+		CorrelationScore:          action.CorrelationScore,
+		InstitutionalHoldingRatio: action.InstitutionalHoldingRatio,
+		InternalHoldingRatio:      action.InternalHoldingRatio,
+		Drawdown:                  action.Drawdown,
+		Stddev:                    action.Stddev,
+		Sharp:                     action.Sharp,
+		NetAssetsScaleYi:          action.NetAssetsScaleYi,
+		UnitNAV:                   action.UnitNAV,
+		DailyProfitRatio:          action.DailyProfitRatio,
 		RecentReturns: FundDailyAIReturns{
 			Month1:   action.Month1Return,
 			Month3:   action.Month3Return,

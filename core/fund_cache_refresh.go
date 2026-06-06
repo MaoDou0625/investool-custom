@@ -150,6 +150,7 @@ func RefreshFundCache(ctx context.Context, options FundCacheRefreshOptions, prog
 			return status, err
 		}
 	}
+	enrichFundHolderStructureCache(ctx, fundMap, options.WorkerCount)
 
 	status.Stage = FundCacheRefreshStageBuildCache
 	reportFundCacheRefreshProgress(status, progress)

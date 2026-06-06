@@ -13,10 +13,13 @@ func TestBuildFundCacheRefreshPlanPrioritizesStale4433(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 6, 5, 12, 0, 0, 0, time.Local)
 	stale4433 := buildRecommendationFund("000001", "stale 4433", 10)
+	stale4433.HasHolderStructure = true
 	markStrict4433Fund(stale4433)
 	fresh4433 := buildRecommendationFund("000002", "fresh 4433", 10)
+	fresh4433.HasHolderStructure = true
 	markStrict4433Fund(fresh4433)
 	staleOther := buildRecommendationFund("000003", "stale other", 40)
+	staleOther.HasHolderStructure = true
 	meta := models.NewFundDetailRefreshMeta()
 	meta.Touch("000001", now.Add(-8*24*time.Hour), "seed")
 	meta.Touch("000002", now.Add(-2*24*time.Hour), "seed")
@@ -43,6 +46,37 @@ func TestBuildFundCacheRefreshPlanPrioritizesStale4433(t *testing.T) {
 	require.Equal(t, 1, plan.Priority4433Count)
 	require.Equal(t, 1, plan.MissingCount)
 	require.Equal(t, 1, plan.DeferredCount)
+	require.Equal(t, 1, plan.SkippedFreshCount)
+}
+
+func TestBuildFundCacheRefreshPlanPrioritizesMissingHolderStructure(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 6, 5, 12, 0, 0, 0, time.Local)
+	missingHolder := buildRecommendationFund("000001", "missing holder", 40)
+	freshWithHolder := buildRecommendationFund("000002", "fresh with holder", 40)
+	freshWithHolder.HasHolderStructure = true
+	meta := models.NewFundDetailRefreshMeta()
+	meta.Touch("000001", now.Add(-2*24*time.Hour), "seed")
+	meta.Touch("000002", now.Add(-2*24*time.Hour), "seed")
+
+	plan := BuildFundCacheRefreshPlan(
+		ctx,
+		[]string{"000001", "000002"},
+		models.FundList{missingHolder, freshWithHolder},
+		models.FundList{},
+		meta,
+		FundCacheRefreshOptions{
+			Mode:                   FundCacheRefreshModePriority,
+			MaxFunds:               10,
+			Priority4433StaleAfter: 7 * 24 * time.Hour,
+			Non4433StaleAfter:      30 * 24 * time.Hour,
+			Now:                    now,
+		},
+	)
+
+	require.Equal(t, []string{"000001"}, plan.Codes)
+	require.Equal(t, FundCacheRefreshPriorityStaleOther, plan.Priorities["000001"])
+	require.Equal(t, 1, plan.StaleOtherCount)
 	require.Equal(t, 1, plan.SkippedFreshCount)
 }
 

@@ -43,3 +43,29 @@ func TestBuildFundDailyAIContextUsesLargerCandidatePoolThanPageDisplay(t *testin
 		t.Fatalf("expected validation rules in AI context")
 	}
 }
+
+func TestBuildFundDailyAIContextIncludesHolderStructureRatios(t *testing.T) {
+	report := FundDailyAdviceReport{
+		Config: DefaultFundDailyAdviceConfig(),
+		DecisionCandidateActions: []FundDailyAction{
+			{
+				Code:                      "000001",
+				Name:                      "holder ratio fund",
+				InstitutionalHoldingRatio: 45.6,
+				InternalHoldingRatio:      1.2,
+			},
+		},
+	}
+
+	contextData := BuildFundDailyAIContext(report)
+
+	if len(contextData.Candidates) != 1 {
+		t.Fatalf("expected 1 candidate, got %d", len(contextData.Candidates))
+	}
+	if contextData.Candidates[0].InstitutionalHoldingRatio != 45.6 {
+		t.Fatalf("expected institutional holder ratio 45.6, got %.2f", contextData.Candidates[0].InstitutionalHoldingRatio)
+	}
+	if contextData.Candidates[0].InternalHoldingRatio != 1.2 {
+		t.Fatalf("expected internal holder ratio 1.2, got %.2f", contextData.Candidates[0].InternalHoldingRatio)
+	}
+}
