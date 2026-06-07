@@ -42,6 +42,20 @@ func TestBuildFundDailyLocalDecisionShowsConversationStyleAdvice(t *testing.T) {
 					Month6: 38.6,
 				},
 			},
+			{
+				Code:      "012351",
+				Name:      "万家元贞量化选股股票C",
+				FundType:  "股票型",
+				Score:     93,
+				RiskLevel: "中低",
+				Drawdown:  14.9,
+				Stddev:    14.4,
+				RecentReturns: FundDailyAIReturns{
+					Month1: 7.31,
+					Month3: 13.08,
+					Month6: 38.33,
+				},
+			},
 		},
 		Candidates: []FundDailyAIFund{
 			{
@@ -59,7 +73,8 @@ func TestBuildFundDailyLocalDecisionShowsConversationStyleAdvice(t *testing.T) {
 				Code:                "017093",
 				Name:                "景顺长城纳斯达克科技ETF联接(QDII)C人民币",
 				FundType:            "指数型-海外股票",
-				SuggestedBuyCeiling: 300,
+				ProgramActionLevel:  "watch",
+				SuggestedBuyCeiling: 0,
 				Score:               93,
 				StrategyScore:       100,
 				StrategyTheme:       "海外科技",
@@ -67,8 +82,8 @@ func TestBuildFundDailyLocalDecisionShowsConversationStyleAdvice(t *testing.T) {
 				RecentReturns:       FundDailyAIReturns{Month1: 12.45, Month3: 25.43, Month6: 19.24},
 			},
 			{
-				Code:                "012351",
-				Name:                "万家元贞量化选股股票C",
+				Code:                "012350",
+				Name:                "万家元贞量化选股股票A",
 				FundType:            "股票型",
 				SuggestedBuyCeiling: 300,
 				Score:               93,
@@ -79,10 +94,21 @@ func TestBuildFundDailyLocalDecisionShowsConversationStyleAdvice(t *testing.T) {
 				TopStocks:           []FundDailyTopHolding{{Name: "新易盛", HoldRatio: 1.28}, {Name: "中际旭创", HoldRatio: 1.17}},
 			},
 			{
+				Code:                "010637",
+				Name:                "财通安盈混合C",
+				FundType:            "混合型",
+				SuggestedBuyCeiling: 300,
+				Score:               90,
+				StrategyScore:       96,
+				StrategyTheme:       "稳健分散",
+				NetAssetsScaleYi:    2,
+				RecentReturns:       FundDailyAIReturns{Month1: 7.0, Month3: 22.8, Month6: 30.0},
+			},
+			{
 				Code:                "014661",
 				Name:                "天弘黄金ETF联接A",
 				FundType:            "指数型-商品",
-				SuggestedBuyCeiling: 100,
+				SuggestedBuyCeiling: 0,
 				Score:               70,
 				StrategyScore:       46,
 				StrategyTheme:       "黄金/贵金属",
@@ -101,11 +127,15 @@ func TestBuildFundDailyLocalDecisionShowsConversationStyleAdvice(t *testing.T) {
 	}
 	assertDailyDecisionAction(t, decision, "001407", "hold", 0)
 	assertDailyDecisionAction(t, decision, "009239", "hold", 0)
-	assertDailyDecisionAction(t, decision, "017093", "buy", 60)
-	assertDailyDecisionAction(t, decision, "012351", "buy", 60)
+	assertDailyDecisionAction(t, decision, "012351", "hold", 0)
+	assertDailyDecisionAction(t, decision, "017091", "buy", 60)
+	assertDailyDecisionAction(t, decision, "010637", "buy", 60)
 	assertDailyDecisionAction(t, decision, "014661", "watch", 0)
-	if hasDailyDecisionCode(decision, "017091") {
-		t.Fatalf("expected class A candidate to be suppressed when class C is available")
+	if hasDailyDecisionBuy(decision, "012350") {
+		t.Fatalf("expected class A candidate to be suppressed when same fund class C is already held")
+	}
+	if hasDailyDecisionBuy(decision, "017093") {
+		t.Fatalf("expected non-subscribable candidate to be unavailable for local buy decisions")
 	}
 }
 
@@ -123,9 +153,9 @@ func assertDailyDecisionAction(t *testing.T, decision FundDailyAIDecision, code 
 	t.Fatalf("missing action for %s", code)
 }
 
-func hasDailyDecisionCode(decision FundDailyAIDecision, code string) bool {
+func hasDailyDecisionBuy(decision FundDailyAIDecision, code string) bool {
 	for _, item := range decision.Actions {
-		if item.Code == code {
+		if item.Code == code && item.Action == "buy" && item.Amount > 0 {
 			return true
 		}
 	}

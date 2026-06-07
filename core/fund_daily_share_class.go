@@ -18,7 +18,7 @@ func preferClassCFundDailyActions(actions []FundDailyAction) []FundDailyAction {
 	groups := make([]string, len(actions))
 	classes := make([]string, len(actions))
 	groupHasA := map[string]bool{}
-	groupHasC := map[string]bool{}
+	groupHasBuyableC := map[string]bool{}
 	for idx, action := range actions {
 		base, class := splitFundShareClass(action.Name)
 		if base == "" {
@@ -30,7 +30,9 @@ func preferClassCFundDailyActions(actions []FundDailyAction) []FundDailyAction {
 		case fundShareClassA:
 			groupHasA[base] = true
 		case fundShareClassC:
-			groupHasC[base] = true
+			if action.SuggestedAmount > 0 {
+				groupHasBuyableC[base] = true
+			}
 		}
 	}
 
@@ -38,7 +40,7 @@ func preferClassCFundDailyActions(actions []FundDailyAction) []FundDailyAction {
 	for idx, action := range actions {
 		group := groups[idx]
 		class := classes[idx]
-		if class == fundShareClassA && groupHasC[group] {
+		if class == fundShareClassA && groupHasBuyableC[group] {
 			continue
 		}
 		if class == fundShareClassC && groupHasA[group] {

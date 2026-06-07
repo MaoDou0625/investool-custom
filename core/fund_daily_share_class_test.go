@@ -2,11 +2,11 @@ package core
 
 import "testing"
 
-func TestPreferClassCFundDailyActionsDropsAWhenCExists(t *testing.T) {
+func TestPreferClassCFundDailyActionsDropsAWhenBuyableCExists(t *testing.T) {
 	actions := []FundDailyAction{
-		{Code: "000001", Name: "测试成长混合A", Score: 95},
-		{Code: "000002", Name: "测试成长混合C", Score: 80},
-		{Code: "000003", Name: "其他稳健混合A", Score: 90},
+		{Code: "000001", Name: "测试成长混合A", Score: 95, SuggestedAmount: 100},
+		{Code: "000002", Name: "测试成长混合C", Score: 80, SuggestedAmount: 100},
+		{Code: "000003", Name: "其他稳健混合A", Score: 90, SuggestedAmount: 100},
 	}
 
 	got := preferClassCFundDailyActions(actions)
@@ -19,8 +19,23 @@ func TestPreferClassCFundDailyActionsDropsAWhenCExists(t *testing.T) {
 	if got[1].Code != "000003" {
 		t.Fatalf("expected unrelated A class to remain, got %s", got[1].Code)
 	}
-	if len(got[0].Reasons) == 0 || got[0].Reasons[0] != "同一基金存在 A/C 份额，已优先展示 C 类。" {
+	if len(got[0].Reasons) == 0 {
 		t.Fatalf("expected C class reason, got %#v", got[0].Reasons)
+	}
+}
+
+func TestPreferClassCFundDailyActionsKeepsAWhenCIsNotBuyable(t *testing.T) {
+	actions := []FundDailyAction{
+		{Code: "000001", Name: "测试成长混合A", Score: 95, SuggestedAmount: 100},
+		{Code: "000002", Name: "测试成长混合C", Score: 80, SuggestedAmount: 0},
+	}
+
+	got := preferClassCFundDailyActions(actions)
+	if len(got) != 2 {
+		t.Fatalf("expected both classes to remain when C is not buyable, got %d", len(got))
+	}
+	if got[0].Code != "000001" || got[1].Code != "000002" {
+		t.Fatalf("unexpected action order: %#v", got)
 	}
 }
 

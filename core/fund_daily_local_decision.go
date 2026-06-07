@@ -51,7 +51,7 @@ func BuildFundDailyLocalDecision(contextData FundDailyAIContext) FundDailyAIDeci
 		actions = append(actions, fundDailyLocalHoldAction(fund, signals))
 	}
 
-	candidateScores := scoreFundDailyLocalCandidates(contextData.Candidates, signals)
+	candidateScores := scoreFundDailyLocalCandidates(contextData.Candidates, contextData.Portfolio, signals)
 	buyActions, usedBudget := buildFundDailyLocalBuyActions(candidateScores, budget)
 	actions = append(actions, buyActions...)
 	watchAction, ok := buildFundDailyLocalWatchAction(contextData.Candidates)
@@ -168,13 +168,17 @@ func fundDailyLocalHoldAction(fund FundDailyAIFund, signals fundDailyLocalSignal
 	}
 }
 
-func scoreFundDailyLocalCandidates(candidates []FundDailyAIFund, signals fundDailyLocalSignals) []fundDailyLocalCandidateScore {
-	filtered := preferClassCFundDailyAIFunds(candidates)
-	scores := make([]fundDailyLocalCandidateScore, 0, len(filtered))
-	for _, fund := range filtered {
+func scoreFundDailyLocalCandidates(candidates []FundDailyAIFund, portfolio []FundDailyAIFund, signals fundDailyLocalSignals) []fundDailyLocalCandidateScore {
+	filtered := make([]FundDailyAIFund, 0, len(candidates))
+	for _, fund := range candidates {
 		if fund.SuggestedBuyCeiling <= 0 || fund.Score < 65 {
 			continue
 		}
+		filtered = append(filtered, fund)
+	}
+	filtered = filterOwnedShareClassFundDailyAIFunds(preferClassCFundDailyAIFunds(filtered), portfolio)
+	scores := make([]fundDailyLocalCandidateScore, 0, len(filtered))
+	for _, fund := range filtered {
 		score := fund.StrategyScore*0.55 + float64(fund.Score)*0.35
 		if strings.Contains(fund.StrategyTheme, "量化") {
 			score += 16
@@ -215,6 +219,40 @@ func scoreFundDailyLocalCandidates(candidates []FundDailyAIFund, signals fundDai
 		return scores[i].fund.Code < scores[j].fund.Code
 	})
 	return scores
+}
+
+func filterOwnedShareClassFundDailyAIFunds(candidates []FundDailyAIFund, portfolio []FundDailyAIFund) []FundDailyAIFund {
+	if len(candidates) == 0 || len(portfolio) == 0 {
+		return candidates
+	}
+
+	ownedGroups := map[string]bool{}
+	for _, fund := range portfolio {
+		group := fundDailyShareClassGroup(fund.Name, fund.Code)
+		if group != "" {
+			ownedGroups[group] = true
+		}
+	}
+	if len(ownedGroups) == 0 {
+		return candidates
+	}
+
+	filtered := make([]FundDailyAIFund, 0, len(candidates))
+	for _, fund := range candidates {
+		if ownedGroups[fundDailyShareClassGroup(fund.Name, fund.Code)] {
+			continue
+		}
+		filtered = append(filtered, fund)
+	}
+	return filtered
+}
+
+func fundDailyShareClassGroup(name string, code string) string {
+	base, _ := splitFundShareClass(name)
+	if base != "" {
+		return base
+	}
+	return code
 }
 
 func buildFundDailyLocalBuyActions(scores []fundDailyLocalCandidateScore, budget float64) ([]FundDailyAIOutputAction, float64) {
