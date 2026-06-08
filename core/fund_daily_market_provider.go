@@ -117,7 +117,11 @@ func (p liveFundDailyMarketDataProvider) QueryIndexQuotes(ctx context.Context) f
 func (p liveFundDailyMarketDataProvider) QueryIndustryGainers(ctx context.Context, limit int) fundDailyMarketQuoteResult {
 	quotes, err := p.eastMoney.QueryIndustryBoardMovers(ctx, limit, false)
 	if err != nil {
-		return fundDailyMarketQuoteResult{Warnings: []string{fmt.Sprintf("行业上涨榜读取失败：%s", compactFundDailyMarketError(err))}}
+		fallbackQuotes, fallbackErr := p.sina.QueryIndustryBoardMovers(ctx, limit, false)
+		if fallbackErr != nil {
+			return fundDailyMarketQuoteResult{Warnings: []string{fmt.Sprintf("行业上涨榜读取失败：东方财富 %s；Sina %s", compactFundDailyMarketError(err), compactFundDailyMarketError(fallbackErr))}}
+		}
+		return fundDailyMarketQuoteResult{Quotes: normalizeFundDailySinaMarketQuotes(fallbackQuotes)}
 	}
 	return fundDailyMarketQuoteResult{Quotes: normalizeFundDailyEastMoneyMarketQuotes(quotes, "industry")}
 }
@@ -125,7 +129,11 @@ func (p liveFundDailyMarketDataProvider) QueryIndustryGainers(ctx context.Contex
 func (p liveFundDailyMarketDataProvider) QueryIndustryLosers(ctx context.Context, limit int) fundDailyMarketQuoteResult {
 	quotes, err := p.eastMoney.QueryIndustryBoardMovers(ctx, limit, true)
 	if err != nil {
-		return fundDailyMarketQuoteResult{Warnings: []string{fmt.Sprintf("行业下跌榜读取失败：%s", compactFundDailyMarketError(err))}}
+		fallbackQuotes, fallbackErr := p.sina.QueryIndustryBoardMovers(ctx, limit, true)
+		if fallbackErr != nil {
+			return fundDailyMarketQuoteResult{Warnings: []string{fmt.Sprintf("行业下跌榜读取失败：东方财富 %s；Sina %s", compactFundDailyMarketError(err), compactFundDailyMarketError(fallbackErr))}}
+		}
+		return fundDailyMarketQuoteResult{Quotes: normalizeFundDailySinaMarketQuotes(fallbackQuotes)}
 	}
 	return fundDailyMarketQuoteResult{Quotes: normalizeFundDailyEastMoneyMarketQuotes(quotes, "industry")}
 }
