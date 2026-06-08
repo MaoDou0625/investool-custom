@@ -69,3 +69,29 @@ func TestBuildFundDailyAIContextIncludesHolderStructureRatios(t *testing.T) {
 		t.Fatalf("expected internal holder ratio 1.2, got %.2f", contextData.Candidates[0].InternalHoldingRatio)
 	}
 }
+
+func TestBuildFundDailyAIContextIncludesSubscriptionStatus(t *testing.T) {
+	report := FundDailyAdviceReport{
+		Config: DefaultFundDailyAdviceConfig(),
+		DecisionCandidateActions: []FundDailyAction{
+			{
+				Code:               "017093",
+				Name:               "subscription gated fund",
+				SubscriptionStatus: "暂停申购",
+				CanSubscribe:       false,
+			},
+		},
+	}
+
+	contextData := BuildFundDailyAIContext(report)
+
+	if len(contextData.Candidates) != 1 {
+		t.Fatalf("expected 1 candidate, got %d", len(contextData.Candidates))
+	}
+	if contextData.Candidates[0].SubscriptionStatus != "暂停申购" {
+		t.Fatalf("expected subscription status to be carried into context, got %q", contextData.Candidates[0].SubscriptionStatus)
+	}
+	if contextData.Candidates[0].CanSubscribe {
+		t.Fatalf("expected stopped fund to be marked non-subscribable")
+	}
+}

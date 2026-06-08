@@ -593,9 +593,6 @@ func NewFund(ctx context.Context, efund *eastmoney.RespFundInfo) *Fund {
 }
 
 func (f Fund) CanSubscribe() bool {
-	if strings.TrimSpace(f.SubscriptionStatus) == "" {
-		return true
-	}
 	return strings.TrimSpace(f.SubscriptionStatus) == "开放申购"
 }
 

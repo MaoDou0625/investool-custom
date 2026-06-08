@@ -81,6 +81,8 @@ type FundDailyAIFund struct {
 	NetAssetsScaleYi          float64               `json:"net_assets_scale_yi"`
 	UnitNAV                   float64               `json:"unit_nav"`
 	DailyProfitRatio          float64               `json:"daily_profit_ratio_percent"`
+	SubscriptionStatus        string                `json:"subscription_status"`
+	CanSubscribe              bool                  `json:"can_subscribe"`
 	RecentReturns             FundDailyAIReturns    `json:"recent_returns"`
 	RankRatios                FundDailyAIRankRatios `json:"rank_ratios"`
 	Manager                   FundDailyAIManager    `json:"manager"`
@@ -262,6 +264,8 @@ func fundDailyAIFundFromAction(action FundDailyAction, source string) FundDailyA
 		NetAssetsScaleYi:          action.NetAssetsScaleYi,
 		UnitNAV:                   action.UnitNAV,
 		DailyProfitRatio:          action.DailyProfitRatio,
+		SubscriptionStatus:        action.SubscriptionStatus,
+		CanSubscribe:              action.CanSubscribe,
 		RecentReturns: FundDailyAIReturns{
 			Month1:   action.Month1Return,
 			Month3:   action.Month3Return,

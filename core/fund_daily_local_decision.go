@@ -171,7 +171,7 @@ func fundDailyLocalHoldAction(fund FundDailyAIFund, signals fundDailyLocalSignal
 func scoreFundDailyLocalCandidates(candidates []FundDailyAIFund, portfolio []FundDailyAIFund, signals fundDailyLocalSignals) []fundDailyLocalCandidateScore {
 	filtered := make([]FundDailyAIFund, 0, len(candidates))
 	for _, fund := range candidates {
-		if fund.SuggestedBuyCeiling <= 0 || fund.Score < 65 {
+		if !fund.CanSubscribe || fund.SuggestedBuyCeiling <= 0 || fund.Score < 65 {
 			continue
 		}
 		filtered = append(filtered, fund)
@@ -322,13 +322,24 @@ func buildFundDailyLocalWatchAction(candidates []FundDailyAIFund) (FundDailyAIOu
 	}, true
 }
 
+type fundDailyDecisionBuyLimit struct {
+	amount       float64
+	canSubscribe bool
+}
+
 func validateFundDailyLocalDecision(decision FundDailyAIDecision, contextData FundDailyAIContext) FundDailyAIDecision {
-	limits := map[string]float64{}
+	limits := map[string]fundDailyDecisionBuyLimit{}
 	for _, fund := range contextData.Portfolio {
-		limits[fundDailyDecisionActionKey(fundDailyBudgetSourcePortfolio, fund.Code)] = fund.SuggestedBuyCeiling
+		limits[fundDailyDecisionActionKey(fundDailyBudgetSourcePortfolio, fund.Code)] = fundDailyDecisionBuyLimit{
+			amount:       fund.SuggestedBuyCeiling,
+			canSubscribe: fund.CanSubscribe,
+		}
 	}
 	for _, fund := range contextData.Candidates {
-		limits[fundDailyDecisionActionKey(fundDailyBudgetSourceCandidate, fund.Code)] = fund.SuggestedBuyCeiling
+		limits[fundDailyDecisionActionKey(fundDailyBudgetSourceCandidate, fund.Code)] = fundDailyDecisionBuyLimit{
+			amount:       fund.SuggestedBuyCeiling,
+			canSubscribe: fund.CanSubscribe,
+		}
 	}
 
 	total := 0.0
@@ -344,8 +355,13 @@ func validateFundDailyLocalDecision(decision FundDailyAIDecision, contextData Fu
 			decision.Warnings = append(decision.Warnings, fmt.Sprintf("%s 不在本次持有/候选数据集中，买入金额已清零。", action.Code))
 			continue
 		}
-		if action.Amount > limit {
-			action.Amount = floorDailyAmount(limit)
+		if !limit.canSubscribe {
+			action.Amount = 0
+			decision.Warnings = append(decision.Warnings, fmt.Sprintf("%s 当前不是开放申购状态，买入金额已清零。", action.Code))
+			continue
+		}
+		if action.Amount > limit.amount {
+			action.Amount = floorDailyAmount(limit.amount)
 			decision.Warnings = append(decision.Warnings, fmt.Sprintf("%s 超过单基金上限，已压缩到 %.2f 元。", action.Code, action.Amount))
 		}
 		total += action.Amount

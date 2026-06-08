@@ -74,6 +74,8 @@ type FundDailyAction struct {
 	NetAssetsScaleYi          float64
 	UnitNAV                   float64
 	DailyProfitRatio          float64
+	SubscriptionStatus        string
+	CanSubscribe              bool
 	Month1Return              float64
 	Month3Return              float64
 	Month6Return              float64
@@ -341,6 +343,8 @@ func fillDailyFundActionMetrics(action *FundDailyAction, fund *models.Fund) {
 	action.NetAssetsScaleYi = fund.NetAssetsScale / 100000000
 	action.UnitNAV = fund.UnitNav
 	action.DailyProfitRatio = fund.DailyProfitRatio
+	action.SubscriptionStatus = strings.TrimSpace(fund.SubscriptionStatus)
+	action.CanSubscribe = fund.CanSubscribe()
 	action.Month1Return = fund.Performance.Month1ProfitRatio
 	action.Month3Return = fund.Performance.Month3ProfitRatio
 	action.Month6Return = fund.Performance.Month6ProfitRatio

@@ -18,3 +18,9 @@ func TestNewFund(t *testing.T) {
 	require.Nil(t, err)
 	t.Log(string(b))
 }
+
+func TestFundCanSubscribeRequiresOpenStatus(t *testing.T) {
+	require.True(t, Fund{SubscriptionStatus: "开放申购"}.CanSubscribe())
+	require.False(t, Fund{SubscriptionStatus: ""}.CanSubscribe())
+	require.False(t, Fund{SubscriptionStatus: "暂停申购"}.CanSubscribe())
+}

@@ -175,8 +175,8 @@ func scoreFundDailyStrategyCandidates(
 		if _, exists := portfolioCodes[fund.Code]; exists {
 			continue
 		}
-		if !fund.CanSubscribe() {
-			subscriptionBlocked[fund.Code] = strings.TrimSpace(fund.SubscriptionStatus)
+		if status := strings.TrimSpace(fund.SubscriptionStatus); status != "" && !fund.CanSubscribe() {
+			subscriptionBlocked[fund.Code] = status
 		}
 		evidence, ok := scoreFundDailyStrategyCandidate(ctx, fund, navCache, profile, themeTrends)
 		if !ok {

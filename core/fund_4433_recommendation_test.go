@@ -45,11 +45,12 @@ func TestBuildFund4433ListFiltersStrictMatches(t *testing.T) {
 
 func buildRecommendationFund(code string, name string, rankRatio float64) *models.Fund {
 	fund := &models.Fund{
-		Code:            code,
-		Name:            name,
-		Type:            "混合型",
-		EstablishedDate: "2018-01-01",
-		NetAssetsScale:  20 * 100000000,
+		Code:               code,
+		Name:               name,
+		Type:               "混合型",
+		EstablishedDate:    "2018-01-01",
+		NetAssetsScale:     20 * 100000000,
+		SubscriptionStatus: "开放申购",
 	}
 	if rankRatio > 0 {
 		fund.Performance.Month3RankRatio = rankRatio
