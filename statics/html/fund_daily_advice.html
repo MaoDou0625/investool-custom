@@ -70,6 +70,13 @@
             {{ end }}
         </p>
         {{ end }}
+        {{ if .Report.MarketContext.RiskAssets }}
+        <p>
+            {{ range .Report.MarketContext.RiskAssets }}
+            <span class="grey-text">{{ .Name }}</span> {{ printf "%.2f" .Price }} / {{ printf "%+.2f%%" .ChangePercent }}&nbsp;&nbsp;
+            {{ end }}
+        </p>
+        {{ end }}
         {{ if .Report.MarketContext.ThemeTilts }}
         <p>
             {{ range .Report.MarketContext.ThemeTilts }}

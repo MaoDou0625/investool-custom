@@ -11,6 +11,7 @@ type fakeFundDailyMarketDataProvider struct {
 	gainers     []FundDailyMarketQuote
 	losers      []FundDailyMarketQuote
 	crossAssets []FundDailyMarketQuote
+	riskAssets  []FundDailyMarketQuote
 }
 
 func (p fakeFundDailyMarketDataProvider) QueryIndexQuotes(ctx context.Context) fundDailyMarketQuoteResult {
@@ -29,6 +30,10 @@ func (p fakeFundDailyMarketDataProvider) QueryCrossAssetQuotes(ctx context.Conte
 	return fundDailyMarketQuoteResult{Quotes: p.crossAssets}
 }
 
+func (p fakeFundDailyMarketDataProvider) QueryRiskAssetQuotes(ctx context.Context) fundDailyMarketQuoteResult {
+	return fundDailyMarketQuoteResult{Quotes: p.riskAssets}
+}
+
 func TestBuildFundDailyMarketContextAnalyzesRiskAndThemes(t *testing.T) {
 	provider := fakeFundDailyMarketDataProvider{
 		indexQuotes: []FundDailyMarketQuote{
@@ -36,6 +41,7 @@ func TestBuildFundDailyMarketContextAnalyzesRiskAndThemes(t *testing.T) {
 			{Code: "399001", Name: "深证成指", Category: "cn_index", ChangePercent: -2.3},
 			{Code: "399006", Name: "创业板指", Category: "cn_index", ChangePercent: -3.1},
 			{Code: "gb_ixic", Name: "纳斯达克", Category: "us_index", ChangePercent: -2.4},
+			{Code: "hkHSTECH", Name: "恒生科技指数", Category: "hk_index", ChangePercent: -2.7},
 		},
 		gainers: []FundDailyMarketQuote{
 			{Code: "BK1408", Name: "机器人", ChangePercent: 3.2},
@@ -46,6 +52,11 @@ func TestBuildFundDailyMarketContextAnalyzesRiskAndThemes(t *testing.T) {
 		},
 		crossAssets: []FundDailyMarketQuote{
 			{Code: "hf_CL", Name: "纽约原油", Category: "commodity", ChangePercent: 3.4},
+		},
+		riskAssets: []FundDailyMarketQuote{
+			{Code: "^VIX", Name: "VIX恐慌指数", Category: "volatility", Price: 28, ChangePercent: 12},
+			{Code: "^TNX", Name: "美国10年期国债收益率", Category: "rate", Price: 4.75, ChangeAmount: 0.08},
+			{Code: "TLT", Name: "20年期以上美债ETF", Category: "bond_etf", ChangePercent: -1.2},
 		},
 	}
 
@@ -72,6 +83,12 @@ func TestBuildFundDailyMarketContextAnalyzesRiskAndThemes(t *testing.T) {
 	if !hasMarketThemeTilt(contextData.ThemeTilts, "油气/能源", 1) {
 		t.Fatalf("expected positive energy tilt from oil, got %+v", contextData.ThemeTilts)
 	}
+	if !hasMarketThemeTilt(contextData.ThemeTilts, "债券/固收", -1) {
+		t.Fatalf("expected negative bond tilt from rates/TLT, got %+v", contextData.ThemeTilts)
+	}
+	if !hasMarketThemeTilt(contextData.ThemeTilts, "港股科技/QDII", -1) {
+		t.Fatalf("expected negative HK tech tilt, got %+v", contextData.ThemeTilts)
+	}
 }
 
 func TestFundDailyMarketTiltScoreForFund(t *testing.T) {
@@ -81,6 +98,7 @@ func TestFundDailyMarketTiltScoreForFund(t *testing.T) {
 			{Theme: "黄金/贵金属", Score: -15},
 			{Theme: "成长/科技", Score: 8},
 			{Theme: "美股科技/QDII", Score: -12},
+			{Theme: "债券/固收", Score: -8},
 		},
 	}
 
@@ -95,6 +113,10 @@ func TestFundDailyMarketTiltScoreForFund(t *testing.T) {
 	qdiiScore := fundDailyMarketTiltScoreForFund(FundDailyAIFund{Name: "纳斯达克100ETF联接(QDII)C"}, market)
 	if qdiiScore >= 0 {
 		t.Fatalf("expected negative QDII tilt, got %.2f", qdiiScore)
+	}
+	bondScore := fundDailyMarketTiltScoreForFund(FundDailyAIFund{Name: "中长期纯债债券A"}, market)
+	if bondScore >= 0 {
+		t.Fatalf("expected negative bond tilt, got %.2f", bondScore)
 	}
 }
 

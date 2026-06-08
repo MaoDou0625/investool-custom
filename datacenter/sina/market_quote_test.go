@@ -28,6 +28,14 @@ func TestParseSinaMarketQuoteLine(t *testing.T) {
 			pctSign:  -1,
 		},
 		{
+			name:     "global index",
+			line:     `var hq_str_b_NKY="日经225指数,64024.3800,-2563.74,-3.85,2:12 AM,14:12:00,2026-06-08,14:30:01,65947.5600,66588.1200,66115.1800,63406.6600,0";`,
+			category: MarketQuoteCategoryGlobal,
+			symbol:   "b_NKY",
+			quote:    "日经225指数",
+			pctSign:  -1,
+		},
+		{
 			name:     "fx",
 			line:     `var hq_str_fx_susdcnh="18:54:03,6.785800,6.785900,6.791000,95,6.790000,6.792100,6.782600,6.785800,离岸人民币（香港）,-0.080000,-0.005200,0.001399,,6.995700,6.758100,,2026-06-08";`,
 			category: MarketQuoteCategoryFX,

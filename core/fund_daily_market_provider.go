@@ -7,6 +7,7 @@ import (
 
 	"github.com/axiaoxin-com/investool/datacenter/eastmoney"
 	"github.com/axiaoxin-com/investool/datacenter/sina"
+	"github.com/axiaoxin-com/investool/datacenter/yahoo"
 )
 
 const (
@@ -26,19 +27,43 @@ var fundDailyMarketSinaIndexSymbols = []string{
 	"sh000001",
 	"sz399001",
 	"sz399006",
+	"gb_dji",
 	"gb_inx",
 	"gb_ixic",
+	"gb_ndx",
 	"hkHSI",
+	"hkHSTECH",
+	"hkHSCEI",
+	"b_NKY",
+	"b_DAX",
+	"b_FTSE",
+	"b_CAC",
 }
 
 var fundDailyMarketSinaCrossAssetSymbols = []string{
 	"fx_susdcnh",
 	"fx_susdcny",
+	"fx_seurusd",
+	"fx_susdjpy",
+	"fx_sgbpusd",
+	"fx_saudusd",
+	"fx_susdhkd",
 	"DINIW",
 	"hf_XAU",
 	"hf_GC",
+	"hf_SI",
 	"hf_CL",
 	"hf_OIL",
+	"hf_HG",
+	"hf_CAD",
+	"hf_NID",
+}
+
+var fundDailyMarketYahooRiskSymbols = []string{
+	"^VIX",
+	"^TNX",
+	"^TYX",
+	"TLT",
 }
 
 type fundDailyMarketQuoteResult struct {
@@ -51,17 +76,20 @@ type fundDailyMarketDataProvider interface {
 	QueryIndustryGainers(ctx context.Context, limit int) fundDailyMarketQuoteResult
 	QueryIndustryLosers(ctx context.Context, limit int) fundDailyMarketQuoteResult
 	QueryCrossAssetQuotes(ctx context.Context) fundDailyMarketQuoteResult
+	QueryRiskAssetQuotes(ctx context.Context) fundDailyMarketQuoteResult
 }
 
 type liveFundDailyMarketDataProvider struct {
 	eastMoney eastmoney.EastMoney
 	sina      sina.Sina
+	yahoo     yahoo.Yahoo
 }
 
 func newLiveFundDailyMarketDataProvider() liveFundDailyMarketDataProvider {
 	return liveFundDailyMarketDataProvider{
 		eastMoney: eastmoney.NewEastMoney(),
 		sina:      sina.NewSina(),
+		yahoo:     yahoo.NewYahoo(),
 	}
 }
 
@@ -110,6 +138,14 @@ func (p liveFundDailyMarketDataProvider) QueryCrossAssetQuotes(ctx context.Conte
 	return fundDailyMarketQuoteResult{Quotes: normalizeFundDailySinaMarketQuotes(quotes)}
 }
 
+func (p liveFundDailyMarketDataProvider) QueryRiskAssetQuotes(ctx context.Context) fundDailyMarketQuoteResult {
+	quotes, err := p.yahoo.QueryMarketQuotes(ctx, fundDailyMarketYahooRiskSymbols)
+	if err != nil {
+		return fundDailyMarketQuoteResult{Warnings: []string{fmt.Sprintf("波动率/利率行情读取失败：%s", compactFundDailyMarketError(err))}}
+	}
+	return fundDailyMarketQuoteResult{Quotes: normalizeFundDailyYahooMarketQuotes(quotes)}
+}
+
 func compactFundDailyMarketError(err error) string {
 	if err == nil {
 		return ""
@@ -139,6 +175,7 @@ func normalizeFundDailyEastMoneyMarketQuotes(quotes []eastmoney.MarketQuote, cat
 			Category:      category,
 			Source:        fundDailyMarketQuoteSourceEM,
 			Price:         quote.Price,
+			ChangeAmount:  quote.ChangeAmount,
 			ChangePercent: quote.ChangePercent,
 			Turnover:      quote.Turnover,
 		})
@@ -158,8 +195,29 @@ func normalizeFundDailySinaMarketQuotes(quotes []sina.MarketQuote) []FundDailyMa
 			Category:      quote.Category,
 			Source:        fundDailyMarketQuoteSourceSina,
 			Price:         quote.Price,
+			ChangeAmount:  quote.ChangeAmount,
 			ChangePercent: quote.ChangePercent,
 			Turnover:      quote.Turnover,
+			AsOf:          quote.AsOf,
+		})
+	}
+	return result
+}
+
+func normalizeFundDailyYahooMarketQuotes(quotes []yahoo.MarketQuote) []FundDailyMarketQuote {
+	result := make([]FundDailyMarketQuote, 0, len(quotes))
+	for _, quote := range quotes {
+		if strings.TrimSpace(quote.Symbol) == "" && strings.TrimSpace(quote.Name) == "" {
+			continue
+		}
+		result = append(result, FundDailyMarketQuote{
+			Code:          quote.Symbol,
+			Name:          quote.Name,
+			Category:      quote.Category,
+			Source:        "yahoo",
+			Price:         quote.Price,
+			ChangeAmount:  quote.ChangeAmount,
+			ChangePercent: quote.ChangePercent,
 			AsOf:          quote.AsOf,
 		})
 	}

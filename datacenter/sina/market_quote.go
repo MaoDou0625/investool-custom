@@ -22,6 +22,7 @@ const (
 	MarketQuoteCategoryCNIndex   = "cn_index"
 	MarketQuoteCategoryUSIndex   = "us_index"
 	MarketQuoteCategoryHKIndex   = "hk_index"
+	MarketQuoteCategoryGlobal    = "global_index"
 	MarketQuoteCategoryFX        = "fx"
 	MarketQuoteCategoryCommodity = "commodity"
 )
@@ -98,6 +99,8 @@ func parseSinaMarketQuoteLine(line string) (MarketQuote, bool) {
 		return parseSinaUSIndexQuote(symbol, fields)
 	case strings.HasPrefix(symbol, "hk"):
 		return parseSinaHKIndexQuote(symbol, fields)
+	case strings.HasPrefix(symbol, "b_"):
+		return parseSinaGlobalIndexQuote(symbol, fields)
 	case strings.HasPrefix(symbol, "fx_"):
 		return parseSinaFXQuote(symbol, fields)
 	case strings.HasPrefix(symbol, "hf_"):
@@ -164,6 +167,24 @@ func parseSinaHKIndexQuote(symbol string, fields []string) (MarketQuote, bool) {
 		Turnover:      parseSinaFloatAt(fields, 11),
 		AsOf:          joinSinaDateTime(fields, 17, 18),
 	}, strings.TrimSpace(fields[1]) != ""
+}
+
+func parseSinaGlobalIndexQuote(symbol string, fields []string) (MarketQuote, bool) {
+	if len(fields) < 4 {
+		return MarketQuote{}, false
+	}
+	return MarketQuote{
+		Symbol:        symbol,
+		Name:          fields[0],
+		Category:      MarketQuoteCategoryGlobal,
+		Price:         parseSinaFloat(fields[1]),
+		ChangeAmount:  parseSinaFloat(fields[2]),
+		ChangePercent: parseSinaFloat(fields[3]),
+		High:          parseSinaFloatAt(fields, 10),
+		Low:           parseSinaFloatAt(fields, 11),
+		Turnover:      parseSinaFloatAt(fields, 12),
+		AsOf:          joinSinaDateTime(fields, 6, 7),
+	}, strings.TrimSpace(fields[0]) != ""
 }
 
 func parseSinaFXQuote(symbol string, fields []string) (MarketQuote, bool) {

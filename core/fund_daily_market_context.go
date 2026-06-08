@@ -25,6 +25,7 @@ type FundDailyMarketContext struct {
 	IndustryGainers  []FundDailyMarketQuote     `json:"industry_gainers,omitempty"`
 	IndustryLosers   []FundDailyMarketQuote     `json:"industry_losers,omitempty"`
 	CrossAssets      []FundDailyMarketQuote     `json:"cross_assets,omitempty"`
+	RiskAssets       []FundDailyMarketQuote     `json:"risk_assets,omitempty"`
 	ThemeTilts       []FundDailyMarketThemeTilt `json:"theme_tilts,omitempty"`
 	Reasons          []string                   `json:"reasons,omitempty"`
 	Warnings         []string                   `json:"warnings,omitempty"`
@@ -37,6 +38,7 @@ type FundDailyMarketQuote struct {
 	Source        string  `json:"source,omitempty"`
 	Price         float64 `json:"price"`
 	ChangePercent float64 `json:"change_percent"`
+	ChangeAmount  float64 `json:"change_amount,omitempty"`
 	Turnover      float64 `json:"turnover,omitempty"`
 	AsOf          string  `json:"as_of,omitempty"`
 }
@@ -79,6 +81,10 @@ func buildFundDailyMarketContext(ctx context.Context, provider fundDailyMarketDa
 	contextData.CrossAssets = crossAssets.Quotes
 	contextData.Warnings = append(contextData.Warnings, crossAssets.Warnings...)
 
+	riskAssets := provider.QueryRiskAssetQuotes(ctx)
+	contextData.RiskAssets = riskAssets.Quotes
+	contextData.Warnings = append(contextData.Warnings, riskAssets.Warnings...)
+
 	return analyzeFundDailyMarketContext(contextData)
 }
 
@@ -113,7 +119,7 @@ func analyzeFundDailyMarketContext(contextData FundDailyMarketContext) FundDaily
 		}
 	}
 
-	overseasIndexQuotes := marketQuotesByCategory(contextData.IndexQuotes, "us_index", "hk_index")
+	overseasIndexQuotes := marketQuotesByCategory(contextData.IndexQuotes, "us_index", "hk_index", "global_index")
 	if len(overseasIndexQuotes) > 0 {
 		overseasAvg := averageMarketChange(overseasIndexQuotes)
 		reasons = append(reasons, fmt.Sprintf("海外/港股指数平均涨跌 %.2f%%。", overseasAvg))
@@ -152,13 +158,18 @@ func analyzeFundDailyMarketContext(contextData FundDailyMarketContext) FundDaily
 		riskScore += crossAssetRisk
 		reasons = append(reasons, crossAssetReasons...)
 	}
+	if len(contextData.RiskAssets) > 0 {
+		riskAssetRisk, riskAssetReasons := analyzeFundDailyMarketRiskAssets(contextData.RiskAssets)
+		riskScore += riskAssetRisk
+		reasons = append(reasons, riskAssetReasons...)
+	}
 
 	contextData.RiskScore = clampFloat(riskScore, 0, 100)
 	contextData.RiskLevel = fundDailyMarketRiskLevel(contextData.RiskScore)
 	contextData.BudgetMultiplier = fundDailyMarketBudgetMultiplier(contextData.RiskScore)
 	contextData.ThemeTilts = buildFundDailyMarketThemeTilts(contextData)
 	contextData.Reasons = compactDailyReasons(reasons, 6)
-	if len(contextData.IndexQuotes) > 0 || len(contextData.IndustryGainers) > 0 || len(contextData.IndustryLosers) > 0 || len(contextData.CrossAssets) > 0 {
+	if len(contextData.IndexQuotes) > 0 || len(contextData.IndustryGainers) > 0 || len(contextData.IndustryLosers) > 0 || len(contextData.CrossAssets) > 0 || len(contextData.RiskAssets) > 0 {
 		contextData.Status = "ready"
 	}
 	contextData.Summary = fundDailyMarketSummary(contextData)
@@ -221,6 +232,65 @@ func analyzeFundDailyMarketCrossAssets(quotes []FundDailyMarketQuote) (float64, 
 		}
 	}
 	return riskDelta, compactDailyReasons(reasons, 4)
+}
+
+func analyzeFundDailyMarketRiskAssets(quotes []FundDailyMarketQuote) (float64, []string) {
+	riskDelta := 0.0
+	reasons := []string{}
+	for _, quote := range quotes {
+		name := quote.Name + " " + quote.Code
+		switch {
+		case strings.Contains(name, "VIX"):
+			switch {
+			case quote.Price >= 30:
+				riskDelta += 18
+				reasons = append(reasons, fmt.Sprintf("%s %.2f，波动率处于高位。", quote.Name, quote.Price))
+			case quote.Price >= 25:
+				riskDelta += 12
+				reasons = append(reasons, fmt.Sprintf("%s %.2f，风险偏好偏弱。", quote.Name, quote.Price))
+			case quote.Price >= 20:
+				riskDelta += 7
+				reasons = append(reasons, fmt.Sprintf("%s %.2f，波动率抬升。", quote.Name, quote.Price))
+			case quote.Price <= 15:
+				riskDelta -= 4
+				reasons = append(reasons, fmt.Sprintf("%s %.2f，波动率偏低。", quote.Name, quote.Price))
+			}
+			if quote.ChangePercent >= 10 {
+				riskDelta += 5
+				reasons = append(reasons, fmt.Sprintf("%s 当日上涨 %.2f%%，风险资产短线冲击加大。", quote.Name, quote.ChangePercent))
+			}
+		case strings.Contains(name, "10年期国债收益率"):
+			switch {
+			case quote.Price >= 5:
+				riskDelta += 10
+				reasons = append(reasons, fmt.Sprintf("%s %.2f%%，高利率对成长估值压力较大。", quote.Name, quote.Price))
+			case quote.Price >= 4.5:
+				riskDelta += 6
+				reasons = append(reasons, fmt.Sprintf("%s %.2f%%，利率水平仍偏高。", quote.Name, quote.Price))
+			case quote.Price <= 4:
+				riskDelta -= 2
+				reasons = append(reasons, fmt.Sprintf("%s %.2f%%，利率压力边际缓和。", quote.Name, quote.Price))
+			}
+			if quote.ChangeAmount >= 0.05 {
+				riskDelta += 3
+				reasons = append(reasons, fmt.Sprintf("%s 上行 %.2f 个百分点，压制久期和成长资产。", quote.Name, quote.ChangeAmount))
+			}
+		case strings.Contains(name, "30年期国债收益率"):
+			if quote.Price >= 5 {
+				riskDelta += 4
+				reasons = append(reasons, fmt.Sprintf("%s %.2f%%，长端利率压力偏高。", quote.Name, quote.Price))
+			}
+		case strings.Contains(name, "美债ETF"):
+			if quote.ChangePercent <= -1 {
+				riskDelta += 3
+				reasons = append(reasons, fmt.Sprintf("%s 下跌 %.2f%%，长债价格承压。", quote.Name, quote.ChangePercent))
+			} else if quote.ChangePercent >= 1 {
+				riskDelta -= 2
+				reasons = append(reasons, fmt.Sprintf("%s 上涨 %.2f%%，长债价格对组合有一定缓冲。", quote.Name, quote.ChangePercent))
+			}
+		}
+	}
+	return riskDelta, compactDailyReasons(reasons, 5)
 }
 
 func averageMarketChange(quotes []FundDailyMarketQuote) float64 {
@@ -334,6 +404,14 @@ func buildFundDailyMarketThemeTilts(contextData FundDailyMarketContext) []FundDa
 			addTilt("美股宽基/QDII", 6, fmt.Sprintf("标普500 %.2f%%", quote.ChangePercent))
 		}
 	}
+	if quote, ok := findMarketQuoteContains(contextData.IndexQuotes, "恒生科技"); ok {
+		switch {
+		case quote.ChangePercent <= -2:
+			addTilt("港股科技/QDII", -10, fmt.Sprintf("恒生科技 %.2f%%", quote.ChangePercent))
+		case quote.ChangePercent >= 1:
+			addTilt("港股科技/QDII", 6, fmt.Sprintf("恒生科技 %.2f%%", quote.ChangePercent))
+		}
+	}
 	for _, quote := range contextData.CrossAssets {
 		name := quote.Name + " " + quote.Code
 		switch {
@@ -348,6 +426,28 @@ func buildFundDailyMarketThemeTilts(contextData FundDailyMarketContext) []FundDa
 				addTilt("油气/能源", 6, fmt.Sprintf("%s %.2f%%", quote.Name, quote.ChangePercent))
 			} else if quote.ChangePercent <= -1 {
 				addTilt("油气/能源", -6, fmt.Sprintf("%s %.2f%%", quote.Name, quote.ChangePercent))
+			}
+		}
+	}
+	for _, quote := range contextData.RiskAssets {
+		name := quote.Name + " " + quote.Code
+		switch {
+		case strings.Contains(name, "VIX"):
+			if quote.Price >= 25 || quote.ChangePercent >= 10 {
+				addTilt("美股科技/QDII", -8, fmt.Sprintf("%s %.2f / %+.2f%%", quote.Name, quote.Price, quote.ChangePercent))
+				addTilt("美股宽基/QDII", -6, fmt.Sprintf("%s %.2f / %+.2f%%", quote.Name, quote.Price, quote.ChangePercent))
+			}
+		case strings.Contains(name, "10年期国债收益率"):
+			if quote.Price >= 4.5 || quote.ChangeAmount >= 0.05 {
+				addTilt("成长/科技", -5, fmt.Sprintf("%s %.2f%%", quote.Name, quote.Price))
+				addTilt("美股科技/QDII", -8, fmt.Sprintf("%s %.2f%%", quote.Name, quote.Price))
+				addTilt("债券/固收", -4, fmt.Sprintf("%s %.2f%%", quote.Name, quote.Price))
+			}
+		case strings.Contains(name, "美债ETF"):
+			if quote.ChangePercent <= -1 {
+				addTilt("债券/固收", -8, fmt.Sprintf("%s %.2f%%", quote.Name, quote.ChangePercent))
+			} else if quote.ChangePercent >= 1 {
+				addTilt("债券/固收", 6, fmt.Sprintf("%s %.2f%%", quote.Name, quote.ChangePercent))
 			}
 		}
 	}
@@ -468,6 +568,12 @@ func inferFundDailyMarketThemes(fund FundDailyAIFund) []string {
 	}
 	if strings.Contains(text, "标普") || strings.Contains(text, "美国") || strings.Contains(text, "全球") {
 		themes = append(themes, "美股宽基/QDII")
+	}
+	if strings.Contains(text, "恒生科技") || strings.Contains(text, "港股科技") || strings.Contains(text, "港股通科技") {
+		themes = append(themes, "港股科技/QDII")
+	}
+	if strings.Contains(text, "债券") || strings.Contains(text, "纯债") || strings.Contains(text, "固收") || strings.Contains(text, "利率债") || strings.Contains(text, "信用债") {
+		themes = append(themes, "债券/固收")
 	}
 	if strings.Contains(text, "医药") || strings.Contains(text, "医疗") {
 		themes = append(themes, "医药")
