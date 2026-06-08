@@ -49,6 +49,37 @@
         <p>该页面把 5% 年化目标作为筛选和仓位约束，不表示收益承诺。基金净值和排名会变化，实际操作前仍需要结合当天市场、交易费率和你的现金安排。</p>
     </div>
 
+    {{ if eq .Report.MarketContext.Status "ready" }}
+    <div class="section daily-advice-note">
+        <h5>市场环境输入</h5>
+        <p>{{ .Report.MarketContext.Summary }}</p>
+        {{ range .Report.MarketContext.Reasons }}
+        <p>{{ . }}</p>
+        {{ end }}
+        {{ if .Report.MarketContext.IndexQuotes }}
+        <p>
+            {{ range .Report.MarketContext.IndexQuotes }}
+            <span class="grey-text">{{ .Name }}</span> {{ printf "%.2f%%" .ChangePercent }}&nbsp;&nbsp;
+            {{ end }}
+        </p>
+        {{ end }}
+        {{ if .Report.MarketContext.CrossAssets }}
+        <p>
+            {{ range .Report.MarketContext.CrossAssets }}
+            <span class="grey-text">{{ .Name }}</span> {{ printf "%.2f" .Price }} / {{ printf "%+.2f%%" .ChangePercent }}&nbsp;&nbsp;
+            {{ end }}
+        </p>
+        {{ end }}
+        {{ if .Report.MarketContext.ThemeTilts }}
+        <p>
+            {{ range .Report.MarketContext.ThemeTilts }}
+            <span class="grey-text">{{ .Theme }}</span> {{ printf "%+.1f" .Score }}：{{ .Reason }}&nbsp;&nbsp;
+            {{ end }}
+        </p>
+        {{ end }}
+    </div>
+    {{ end }}
+
     {{ if .Report.AIDecision.Status }}
     <div class="section daily-decision-panel">
         <div class="daily-decision-header">

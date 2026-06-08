@@ -38,6 +38,7 @@ type FundDailyAdviceReport struct {
 	CandidateActions         []FundDailyAction
 	AIContext                FundDailyAIContext
 	AIDecision               FundDailyAIDecision
+	MarketContext            FundDailyMarketContext
 	Warnings                 []string
 }
 

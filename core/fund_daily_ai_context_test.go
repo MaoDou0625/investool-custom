@@ -95,3 +95,24 @@ func TestBuildFundDailyAIContextIncludesSubscriptionStatus(t *testing.T) {
 		t.Fatalf("expected stopped fund to be marked non-subscribable")
 	}
 }
+
+func TestBuildFundDailyAIContextIncludesMarketContext(t *testing.T) {
+	report := FundDailyAdviceReport{
+		Config: DefaultFundDailyAdviceConfig(),
+		MarketContext: FundDailyMarketContext{
+			Status:           "ready",
+			Summary:          "market summary",
+			RiskLevel:        "cautious",
+			BudgetMultiplier: 0.65,
+		},
+	}
+
+	contextData := BuildFundDailyAIContext(report)
+
+	if contextData.MarketContext.Status != "ready" {
+		t.Fatalf("expected market context to be carried into AI context")
+	}
+	if contextData.MarketContext.BudgetMultiplier != 0.65 {
+		t.Fatalf("expected budget multiplier 0.65, got %.2f", contextData.MarketContext.BudgetMultiplier)
+	}
+}

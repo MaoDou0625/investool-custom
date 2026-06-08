@@ -11,6 +11,7 @@ type FundDailyAIContext struct {
 	Constraints      FundDailyAIConstraints      `json:"constraints"`
 	PortfolioSummary FundDailyAIPortfolioSummary `json:"portfolio_summary"`
 	BudgetInput      FundDailyAIBudgetInput      `json:"budget_input"`
+	MarketContext    FundDailyMarketContext      `json:"market_context"`
 	Portfolio        []FundDailyAIFund           `json:"portfolio"`
 	Candidates       []FundDailyAIFund           `json:"candidates"`
 	OutputContract   FundDailyAIOutputContract   `json:"output_contract"`
@@ -222,6 +223,7 @@ func BuildFundDailyAIContext(report FundDailyAdviceReport) FundDailyAIContext {
 				"ProgramBudget is a deterministic reference, not a required buy amount.",
 			},
 		},
+		MarketContext:   report.MarketContext,
 		Portfolio:       buildFundDailyAIFunds(portfolioActions, fundDailyBudgetSourcePortfolio),
 		Candidates:      buildFundDailyAIFunds(candidateActions, fundDailyBudgetSourceCandidate),
 		OutputContract:  fundDailyAIOutputContract(),
