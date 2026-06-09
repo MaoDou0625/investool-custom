@@ -87,6 +87,30 @@
     </div>
     {{ end }}
 
+    {{ if eq .Report.NewsContext.Status "ready" }}
+    <div class="section daily-advice-note">
+        <h5>新闻/国际局势输入</h5>
+        <p>{{ .Report.NewsContext.Summary }}</p>
+        {{ range .Report.NewsContext.Reasons }}
+        <p>{{ . }}</p>
+        {{ end }}
+        {{ if .Report.NewsContext.ThemeTilts }}
+        <p>
+            {{ range .Report.NewsContext.ThemeTilts }}
+            <span class="grey-text">{{ .Theme }}</span> {{ printf "%+.1f" .Score }}：{{ .Reason }}&nbsp;&nbsp;
+            {{ end }}
+        </p>
+        {{ end }}
+        {{ if .Report.NewsContext.Articles }}
+        <ul class="browser-default">
+            {{ range .Report.NewsContext.Articles }}
+            <li><span class="grey-text">{{ .Source }}</span> {{ .Title }}{{ if .PublishedAt }}（{{ .PublishedAt }}）{{ end }}：{{ .Reason }}</li>
+            {{ end }}
+        </ul>
+        {{ end }}
+    </div>
+    {{ end }}
+
     {{ if .Report.AIDecision.Status }}
     <div class="section daily-decision-panel">
         <div class="daily-decision-header">

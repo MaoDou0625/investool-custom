@@ -12,6 +12,7 @@ type FundDailyAIContext struct {
 	PortfolioSummary FundDailyAIPortfolioSummary `json:"portfolio_summary"`
 	BudgetInput      FundDailyAIBudgetInput      `json:"budget_input"`
 	MarketContext    FundDailyMarketContext      `json:"market_context"`
+	NewsContext      FundDailyNewsContext        `json:"news_context"`
 	Portfolio        []FundDailyAIFund           `json:"portfolio"`
 	Candidates       []FundDailyAIFund           `json:"candidates"`
 	OutputContract   FundDailyAIOutputContract   `json:"output_contract"`
@@ -224,6 +225,7 @@ func BuildFundDailyAIContext(report FundDailyAdviceReport) FundDailyAIContext {
 			},
 		},
 		MarketContext:   report.MarketContext,
+		NewsContext:     report.NewsContext,
 		Portfolio:       buildFundDailyAIFunds(portfolioActions, fundDailyBudgetSourcePortfolio),
 		Candidates:      buildFundDailyAIFunds(candidateActions, fundDailyBudgetSourceCandidate),
 		OutputContract:  fundDailyAIOutputContract(),

@@ -62,13 +62,16 @@ func buildFundDailyAdviceBundle(c *gin.Context) fundDailyAdviceBundle {
 	config := fundDailyAdviceConfigFromSettings(c)
 	navCache, navWarnings := loadFundDailyAdviceNAVCache()
 	marketContext := core.BuildFundDailyMarketContext(c)
+	newsContext := core.BuildFundDailyNewsContext(c)
 	candidatePoolCount := maxInt(config.AICandidateCount, config.CandidateCount*18)
 	selection := core.SelectDailyAdviceCandidatesWithStrategy(c, models.FundAllList, models.Fund4433RecommendationList, portfolioContext.AllAdvices, navCache, candidatePoolCount)
 	subscriptionWarnings := core.RefreshFundDailySubscriptionStatuses(c, selection.Funds, portfolioContext.AllAdvices)
 	report := core.BuildFundDailyAdviceReportWithEvidence(c, portfolioContext.AllAdvices, selection.Funds, selection.Evidence, config)
 	report.MarketContext = marketContext
+	report.NewsContext = newsContext
 	report.Warnings = append(report.Warnings, navWarnings...)
 	report.Warnings = append(report.Warnings, marketContext.Warnings...)
+	report.Warnings = append(report.Warnings, newsContext.Warnings...)
 	report.Warnings = append(report.Warnings, subscriptionWarnings...)
 	report.Warnings = append(report.Warnings, selection.Warnings...)
 	report.AIContext = core.BuildFundDailyAIContext(report)

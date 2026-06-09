@@ -533,12 +533,19 @@ func fundDailyMarketTiltScoreForFund(fund FundDailyAIFund, market FundDailyMarke
 	if market.Status != "ready" || len(market.ThemeTilts) == 0 {
 		return 0
 	}
+	return fundDailyThemeTiltScoreForFund(fund, market.ThemeTilts)
+}
+
+func fundDailyThemeTiltScoreForFund(fund FundDailyAIFund, tilts []FundDailyMarketThemeTilt) float64 {
+	if len(tilts) == 0 {
+		return 0
+	}
 	themes := inferFundDailyMarketThemes(fund)
 	if len(themes) == 0 {
 		return 0
 	}
 	score := 0.0
-	for _, tilt := range market.ThemeTilts {
+	for _, tilt := range tilts {
 		for _, theme := range themes {
 			if tilt.Theme == theme {
 				score += tilt.Score

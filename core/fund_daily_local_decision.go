@@ -44,6 +44,10 @@ func BuildFundDailyLocalDecision(contextData FundDailyAIContext) FundDailyAIDeci
 		reasons = append(reasons, contextData.MarketContext.Summary)
 		reasons = append(reasons, compactDailyReasons(contextData.MarketContext.Reasons, 2)...)
 	}
+	if contextData.NewsContext.Status == "ready" {
+		reasons = append(reasons, contextData.NewsContext.Summary)
+		reasons = append(reasons, compactDailyReasons(contextData.NewsContext.Reasons, 2)...)
+	}
 	if signals.PortfolioRecentRunup {
 		reasons = append(reasons, "持有基金近 1/3/6 月涨幅较高，今天优先控制同方向加仓节奏。")
 	}
@@ -55,7 +59,7 @@ func BuildFundDailyLocalDecision(contextData FundDailyAIContext) FundDailyAIDeci
 		actions = append(actions, fundDailyLocalHoldAction(fund, signals))
 	}
 
-	candidateScores := scoreFundDailyLocalCandidates(contextData.Candidates, contextData.Portfolio, signals, contextData.MarketContext)
+	candidateScores := scoreFundDailyLocalCandidates(contextData.Candidates, contextData.Portfolio, signals, contextData.MarketContext, contextData.NewsContext)
 	buyActions, usedBudget := buildFundDailyLocalBuyActions(candidateScores, budget)
 	actions = append(actions, buyActions...)
 	watchAction, ok := buildFundDailyLocalWatchAction(contextData.Candidates)
@@ -146,6 +150,9 @@ func chooseFundDailyLocalBudget(contextData FundDailyAIContext, signals fundDail
 	if contextData.MarketContext.Status == "ready" && contextData.MarketContext.BudgetMultiplier > 0 {
 		budget = roundDailyAmount(budget * contextData.MarketContext.BudgetMultiplier)
 	}
+	if contextData.NewsContext.Status == "ready" && contextData.NewsContext.BudgetMultiplier > 0 {
+		budget = roundDailyAmount(budget * contextData.NewsContext.BudgetMultiplier)
+	}
 	if budget > contextData.Constraints.MaxDailyBuyAmount {
 		budget = floorDailyAmount(contextData.Constraints.MaxDailyBuyAmount)
 	}
@@ -175,7 +182,7 @@ func fundDailyLocalHoldAction(fund FundDailyAIFund, signals fundDailyLocalSignal
 	}
 }
 
-func scoreFundDailyLocalCandidates(candidates []FundDailyAIFund, portfolio []FundDailyAIFund, signals fundDailyLocalSignals, market FundDailyMarketContext) []fundDailyLocalCandidateScore {
+func scoreFundDailyLocalCandidates(candidates []FundDailyAIFund, portfolio []FundDailyAIFund, signals fundDailyLocalSignals, market FundDailyMarketContext, newsContext FundDailyNewsContext) []fundDailyLocalCandidateScore {
 	filtered := make([]FundDailyAIFund, 0, len(candidates))
 	for _, fund := range candidates {
 		if !fund.CanSubscribe || fund.SuggestedBuyCeiling <= 0 || fund.Score < 65 {
@@ -215,6 +222,7 @@ func scoreFundDailyLocalCandidates(candidates []FundDailyAIFund, portfolio []Fun
 			score -= 25
 		}
 		score += fundDailyMarketTiltScoreForFund(fund, market)
+		score += fundDailyNewsTiltScoreForFund(fund, newsContext)
 		scores = append(scores, fundDailyLocalCandidateScore{fund: fund, score: score})
 	}
 	sort.SliceStable(scores, func(i, j int) bool {

@@ -185,6 +185,48 @@ func TestBuildFundDailyLocalDecisionAppliesMarketBudgetMultiplier(t *testing.T) 
 	}
 }
 
+func TestBuildFundDailyLocalDecisionAppliesNewsBudgetMultiplier(t *testing.T) {
+	contextData := FundDailyAIContext{
+		Constraints: FundDailyAIConstraints{
+			MaxDailyBuyAmount: 500,
+			CashRoom:          4000,
+		},
+		BudgetInput: FundDailyAIBudgetInput{
+			ProgramBudget: 400,
+		},
+		NewsContext: FundDailyNewsContext{
+			Status:           "ready",
+			Summary:          "新闻风险偏高",
+			RiskDelta:        10,
+			BudgetMultiplier: 0.5,
+			ThemeTilts: []FundDailyMarketThemeTilt{
+				{Theme: "成长/科技", Score: -10},
+			},
+		},
+		Candidates: []FundDailyAIFund{
+			{
+				Code:                "100001",
+				Name:                "稳健候选基金",
+				SuggestedBuyCeiling: 300,
+				SubscriptionStatus:  "开放申购",
+				CanSubscribe:        true,
+				Score:               90,
+				StrategyScore:       90,
+				NetAssetsScaleYi:    5,
+			},
+		},
+	}
+
+	decision := BuildFundDailyLocalDecision(contextData)
+
+	if decision.DailyBuyBudget != 60 {
+		t.Fatalf("expected news multiplier to reduce budget to 60, got %.2f", decision.DailyBuyBudget)
+	}
+	if len(decision.Reasons) < 2 {
+		t.Fatalf("expected news summary in decision reasons, got %+v", decision.Reasons)
+	}
+}
+
 func assertDailyDecisionAction(t *testing.T, decision FundDailyAIDecision, code string, action string, amount float64) {
 	t.Helper()
 	for _, item := range decision.Actions {

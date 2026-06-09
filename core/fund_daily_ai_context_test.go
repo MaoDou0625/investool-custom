@@ -116,3 +116,30 @@ func TestBuildFundDailyAIContextIncludesMarketContext(t *testing.T) {
 		t.Fatalf("expected budget multiplier 0.65, got %.2f", contextData.MarketContext.BudgetMultiplier)
 	}
 }
+
+func TestBuildFundDailyAIContextIncludesNewsContext(t *testing.T) {
+	report := FundDailyAdviceReport{
+		Config: DefaultFundDailyAdviceConfig(),
+		NewsContext: FundDailyNewsContext{
+			Status:           "ready",
+			Summary:          "news summary",
+			RiskDelta:        8,
+			BudgetMultiplier: 0.88,
+			Articles: []FundDailyNewsArticle{
+				{Source: "Example", Title: "Fed keeps rates higher", RiskDelta: 6, Confidence: 0.8},
+			},
+		},
+	}
+
+	contextData := BuildFundDailyAIContext(report)
+
+	if contextData.NewsContext.Status != "ready" {
+		t.Fatalf("expected news context to be carried into AI context")
+	}
+	if contextData.NewsContext.BudgetMultiplier != 0.88 {
+		t.Fatalf("expected news budget multiplier 0.88, got %.2f", contextData.NewsContext.BudgetMultiplier)
+	}
+	if len(contextData.NewsContext.Articles) != 1 {
+		t.Fatalf("expected news article evidence in AI context")
+	}
+}
