@@ -55,13 +55,15 @@ func BuildFundDailyLocalDecision(contextData FundDailyAIContext) FundDailyAIDeci
 		riskNotes = append(riskNotes, "当前持有里存在回撤或波动偏高的基金，单日加仓金额应明显低于程序硬上限。")
 	}
 
+	portfolioActions := []FundDailyAIOutputAction{}
 	for _, fund := range contextData.Portfolio {
-		actions = append(actions, fundDailyLocalHoldAction(fund, signals))
+		portfolioActions = append(portfolioActions, fundDailyLocalHoldAction(fund, signals))
 	}
+	actions = append(actions, portfolioActions...)
 
 	candidateScores := scoreFundDailyLocalCandidates(contextData.Candidates, contextData.Portfolio, signals, contextData.MarketContext, contextData.NewsContext)
-	buyActions, usedBudget := buildFundDailyLocalBuyActions(candidateScores, budget)
-	actions = append(actions, buyActions...)
+	buyActions, usedBudget := buildFundDailyLocalRebalanceBuyActions(contextData, candidateScores, budget, signals)
+	actions = mergeFundDailyLocalBuyActions(actions, buyActions)
 	watchAction, ok := buildFundDailyLocalWatchAction(contextData.Candidates)
 	if ok {
 		actions = append(actions, watchAction)
