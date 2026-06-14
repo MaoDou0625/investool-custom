@@ -128,6 +128,16 @@ func fundDailyAdviceConfigFromSettings(c *gin.Context) core.FundDailyAdviceConfi
 	if viper.IsSet("fund_advice.min_core_candidate_score") {
 		config.MinCoreCandidateScore = viper.GetInt("fund_advice.min_core_candidate_score")
 	}
+	if viper.IsSet("fund_advice.disable_buy_on_non_workday") {
+		config.DisableBuyOnNonWorkday = viper.GetBool("fund_advice.disable_buy_on_non_workday")
+		config.DisableBuyOnNonWorkdayConfigured = true
+	}
+	if viper.IsSet("fund_advice.non_workday_dates") {
+		config.NonWorkdayDates = viper.GetStringSlice("fund_advice.non_workday_dates")
+	}
+	if viper.IsSet("fund_advice.workday_dates") {
+		config.WorkdayDates = viper.GetStringSlice("fund_advice.workday_dates")
+	}
 
 	if c.Query("target_return") != "" {
 		if value, ok := parseQueryFloat(c.Query("target_return")); ok {

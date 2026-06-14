@@ -1,6 +1,9 @@
 package core
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestBuildFundDailyLocalDecisionShowsConversationStyleAdvice(t *testing.T) {
 	contextData := FundDailyAIContext{
@@ -224,6 +227,43 @@ func TestBuildFundDailyLocalDecisionAppliesNewsBudgetMultiplier(t *testing.T) {
 	}
 	if len(decision.Reasons) < 2 {
 		t.Fatalf("expected news summary in decision reasons, got %+v", decision.Reasons)
+	}
+}
+
+func TestBuildFundDailyLocalDecisionDisablesBuysOnNonWorkday(t *testing.T) {
+	contextData := FundDailyAIContext{
+		WorkdayGuard: BuildFundDailyWorkdayGuard(time.Date(2026, 6, 14, 11, 0, 0, 0, time.Local), true, DefaultFundDailyWorkdayCalendar()),
+		Constraints: FundDailyAIConstraints{
+			MaxDailyBuyAmount: 500,
+			CashRoom:          4000,
+		},
+		BudgetInput: FundDailyAIBudgetInput{
+			ProgramBudget: 400,
+		},
+		Candidates: []FundDailyAIFund{
+			{
+				Code:                "100001",
+				Name:                "稳健候选基金",
+				SuggestedBuyCeiling: 300,
+				SubscriptionStatus:  "开放申购",
+				CanSubscribe:        true,
+				Score:               90,
+				StrategyScore:       90,
+				NetAssetsScaleYi:    5,
+			},
+		},
+	}
+
+	decision := BuildFundDailyLocalDecision(contextData)
+
+	if decision.DailyBuyBudget != 0 {
+		t.Fatalf("expected zero local buy budget on non-workday, got %.2f", decision.DailyBuyBudget)
+	}
+	if hasDailyDecisionBuy(decision, "100001") {
+		t.Fatalf("expected no buy action on non-workday, actions=%+v", decision.Actions)
+	}
+	if len(decision.Reasons) == 0 || decision.Reasons[0] != contextData.WorkdayGuard.Reason {
+		t.Fatalf("expected non-workday reason to lead decision reasons, got %+v", decision.Reasons)
 	}
 }
 

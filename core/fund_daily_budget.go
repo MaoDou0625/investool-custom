@@ -23,6 +23,9 @@ type fundDailyBudgetActionRef struct {
 }
 
 func maxDailyBuyBudget(report FundDailyAdviceReport) float64 {
+	if report.WorkdayGuard.BlocksBuy() {
+		return 0
+	}
 	if report.CashRoom <= 0 || report.InvestableAmount <= 0 {
 		return 0
 	}

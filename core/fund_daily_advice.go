@@ -11,21 +11,27 @@ import (
 )
 
 type FundDailyAdviceConfig struct {
-	TargetAnnualReturn    float64
-	MaxTotalAmount        float64
-	CashBufferWeight      float64
-	MaxSingleFundWeight   float64
-	TacticalWeight        float64
-	MaxDailyBuyWeight     float64
-	CandidateCount        int
-	AICandidateCount      int
-	MinCandidateScore     int
-	MinCoreCandidateScore int
+	TargetAnnualReturn               float64
+	MaxTotalAmount                   float64
+	CashBufferWeight                 float64
+	MaxSingleFundWeight              float64
+	TacticalWeight                   float64
+	MaxDailyBuyWeight                float64
+	CandidateCount                   int
+	AICandidateCount                 int
+	MinCandidateScore                int
+	MinCoreCandidateScore            int
+	DisableBuyOnNonWorkday           bool
+	DisableBuyOnNonWorkdayConfigured bool
+	NonWorkdayDates                  []string
+	WorkdayDates                     []string
+	Now                              time.Time
 }
 
 type FundDailyAdviceReport struct {
 	GeneratedAt              time.Time
 	Config                   FundDailyAdviceConfig
+	WorkdayGuard             FundDailyWorkdayGuard
 	CurrentAmount            float64
 	InvestableAmount         float64
 	CashRoom                 float64
@@ -113,16 +119,20 @@ type FundDailyTopHolding struct {
 
 func DefaultFundDailyAdviceConfig() FundDailyAdviceConfig {
 	return FundDailyAdviceConfig{
-		TargetAnnualReturn:    5,
-		MaxTotalAmount:        5000,
-		CashBufferWeight:      10,
-		MaxSingleFundWeight:   35,
-		TacticalWeight:        20,
-		MaxDailyBuyWeight:     10,
-		CandidateCount:        8,
-		AICandidateCount:      50,
-		MinCandidateScore:     68,
-		MinCoreCandidateScore: 75,
+		TargetAnnualReturn:               5,
+		MaxTotalAmount:                   5000,
+		CashBufferWeight:                 10,
+		MaxSingleFundWeight:              35,
+		TacticalWeight:                   20,
+		MaxDailyBuyWeight:                10,
+		CandidateCount:                   8,
+		AICandidateCount:                 50,
+		MinCandidateScore:                68,
+		MinCoreCandidateScore:            75,
+		DisableBuyOnNonWorkday:           true,
+		DisableBuyOnNonWorkdayConfigured: true,
+		NonWorkdayDates:                  DefaultFundDailyWorkdayCalendar().NonWorkdayDates,
+		WorkdayDates:                     DefaultFundDailyWorkdayCalendar().WorkdayDates,
 	}
 }
 
@@ -143,10 +153,18 @@ func BuildFundDailyAdviceReportWithEvidence(
 	config FundDailyAdviceConfig,
 ) FundDailyAdviceReport {
 	config = normalizeFundDailyAdviceConfig(config)
+	generatedAt := time.Now()
+	if !config.Now.IsZero() {
+		generatedAt = config.Now
+	}
 	report := FundDailyAdviceReport{
-		GeneratedAt: time.Now(),
+		GeneratedAt: generatedAt,
 		Config:      config,
-		Warnings:    []string{"This report is an investment aid only and does not guarantee target returns."},
+		WorkdayGuard: BuildFundDailyWorkdayGuard(generatedAt, config.DisableBuyOnNonWorkday, FundDailyWorkdayCalendar{
+			NonWorkdayDates: config.NonWorkdayDates,
+			WorkdayDates:    config.WorkdayDates,
+		}),
+		Warnings: []string{"This report is an investment aid only and does not guarantee target returns."},
 	}
 	report.CurrentAmount = currentAmountFromAdvices(portfolioAdvices)
 	report.InvestableAmount = config.MaxTotalAmount
@@ -161,7 +179,20 @@ func BuildFundDailyAdviceReportWithEvidence(
 
 	report.DecisionPortfolioActions = buildDailyPortfolioActions(portfolioAdvices, report)
 	report.DecisionCandidateActions = buildDailyCandidateActions(ctx, candidateFunds, portfolioAdvices, candidateEvidence, report)
+	if report.WorkdayGuard.BlocksBuy() {
+		report.DecisionPortfolioActions, report.DecisionCandidateActions = applyFundDailyWorkdayGuard(
+			report.DecisionPortfolioActions,
+			report.DecisionCandidateActions,
+			report.WorkdayGuard,
+		)
+	}
 	decision := chooseDailyBuyBudget(report.DecisionPortfolioActions, report.DecisionCandidateActions, report)
+	if report.WorkdayGuard.BlocksBuy() {
+		decision.Budget = 0
+		decision.Confidence = 0
+		decision.Reasons = prependUniqueDailyReason(decision.Reasons, report.WorkdayGuard.Reason)
+		report.Warnings = append(report.Warnings, report.WorkdayGuard.Reason)
+	}
 	report.DailyBuyBudget = decision.Budget
 	report.DailyBuyBudgetReasons = decision.Reasons
 	report.PortfolioActions, report.CandidateActions = applyDailyBuyBudget(
@@ -502,6 +533,17 @@ func normalizeFundDailyAdviceConfig(config FundDailyAdviceConfig) FundDailyAdvic
 	if config.MinCoreCandidateScore <= 0 {
 		config.MinCoreCandidateScore = defaults.MinCoreCandidateScore
 	}
+	if !config.DisableBuyOnNonWorkdayConfigured {
+		config.DisableBuyOnNonWorkday = defaults.DisableBuyOnNonWorkday
+	}
+	if len(config.NonWorkdayDates) == 0 {
+		config.NonWorkdayDates = defaults.NonWorkdayDates
+	}
+	if len(config.WorkdayDates) == 0 {
+		config.WorkdayDates = defaults.WorkdayDates
+	}
+	config.NonWorkdayDates = normalizeFundDailyCalendarDates(config.NonWorkdayDates)
+	config.WorkdayDates = normalizeFundDailyCalendarDates(config.WorkdayDates)
 	return config
 }
 

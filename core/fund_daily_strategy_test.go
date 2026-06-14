@@ -94,6 +94,7 @@ func TestBuildFundDailyAdviceReportWithEvidenceSortsCandidatesByStrategyScore(t 
 		CandidateCount:        2,
 		MinCandidateScore:     1,
 		MinCoreCandidateScore: 75,
+		Now:                   time.Date(2026, 6, 15, 11, 0, 0, 0, time.Local),
 	})
 
 	require.Len(t, report.CandidateActions, 2)

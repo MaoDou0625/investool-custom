@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/axiaoxin-com/investool/models"
 )
@@ -24,6 +25,7 @@ func TestBuildFundDailyAIContextUsesLargerCandidatePoolThanPageDisplay(t *testin
 		AICandidateCount:      6,
 		MinCandidateScore:     1,
 		MinCoreCandidateScore: 75,
+		Now:                   time.Date(2026, 6, 15, 11, 0, 0, 0, time.Local),
 	})
 	contextData := BuildFundDailyAIContext(report)
 

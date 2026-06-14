@@ -55,6 +55,11 @@ func BuildFundDailyLocalDecision(contextData FundDailyAIContext) FundDailyAIDeci
 		riskNotes = append(riskNotes, "当前持有里存在回撤或波动偏高的基金，单日加仓金额应明显低于程序硬上限。")
 	}
 
+	if contextData.WorkdayGuard.BlocksBuy() {
+		reasons = prependUniqueDailyReason(reasons, contextData.WorkdayGuard.Reason)
+		riskNotes = prependUniqueDailyReason(riskNotes, contextData.WorkdayGuard.Reason)
+	}
+
 	portfolioActions := []FundDailyAIOutputAction{}
 	for _, fund := range contextData.Portfolio {
 		portfolioActions = append(portfolioActions, fundDailyLocalHoldAction(fund, signals))
@@ -69,12 +74,17 @@ func BuildFundDailyLocalDecision(contextData FundDailyAIContext) FundDailyAIDeci
 		actions = append(actions, watchAction)
 	}
 
+	summary := fundDailyLocalDecisionSummary(usedBudget, len(buyActions), signals)
+	if contextData.WorkdayGuard.BlocksBuy() {
+		summary = "今天是非工作日，不安排基金买入；仅保留持有和观察。"
+	}
+
 	decision := FundDailyAIDecision{
 		Status:         fundDailyDecisionStatusLocal,
 		Provider:       fundDailyDecisionProvider,
 		Model:          fundDailyDecisionModel,
 		GeneratedAt:    time.Now().Format("2006-01-02 15:04:05"),
-		Summary:        fundDailyLocalDecisionSummary(usedBudget, len(buyActions), signals),
+		Summary:        summary,
 		DailyBuyBudget: usedBudget,
 		Actions:        actions,
 		Reasons:        reasons,
@@ -131,6 +141,9 @@ func summarizeFundDailyLocalSignals(contextData FundDailyAIContext) fundDailyLoc
 }
 
 func chooseFundDailyLocalBudget(contextData FundDailyAIContext, signals fundDailyLocalSignals) float64 {
+	if contextData.WorkdayGuard.BlocksBuy() || contextData.BudgetInput.ProgramBudget <= 0 {
+		return 0
+	}
 	if contextData.Constraints.MaxDailyBuyAmount <= 0 || contextData.Constraints.CashRoom <= 0 {
 		return 0
 	}

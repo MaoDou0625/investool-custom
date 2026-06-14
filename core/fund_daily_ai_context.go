@@ -7,6 +7,7 @@ const fundDailyAIContextSchemaVersion = "fund_daily_advice_context.v1"
 type FundDailyAIContext struct {
 	SchemaVersion    string                      `json:"schema_version"`
 	GeneratedAt      string                      `json:"generated_at"`
+	WorkdayGuard     FundDailyWorkdayGuard       `json:"workday_guard"`
 	Goal             FundDailyAIGoal             `json:"goal"`
 	Constraints      FundDailyAIConstraints      `json:"constraints"`
 	PortfolioSummary FundDailyAIPortfolioSummary `json:"portfolio_summary"`
@@ -191,6 +192,7 @@ func BuildFundDailyAIContext(report FundDailyAdviceReport) FundDailyAIContext {
 	return FundDailyAIContext{
 		SchemaVersion: fundDailyAIContextSchemaVersion,
 		GeneratedAt:   report.GeneratedAt.Format("2006-01-02 15:04:05"),
+		WorkdayGuard:  report.WorkdayGuard,
 		Goal: FundDailyAIGoal{
 			TargetAnnualReturn:  report.Config.TargetAnnualReturn,
 			MaxTotalAmount:      report.Config.MaxTotalAmount,
