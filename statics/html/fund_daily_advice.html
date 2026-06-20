@@ -127,6 +127,7 @@
                     <th>风险压力</th>
                     <th>置信度</th>
                     <th>暴露</th>
+                    <th>公开源证据</th>
                     <th>处理建议</th>
                 </tr>
             </thead>
@@ -138,6 +139,13 @@
                     <td>{{ .RiskPressure }}</td>
                     <td>{{ printf "%.0f" .Confidence }}</td>
                     <td>{{ printf "%.1f%%" .ExposureWeight }}</td>
+                    <td>
+                        {{ range .Evidence }}
+                        {{ if or (eq .Category "valuation_percentile") (eq .Category "earnings_revision") }}
+                        <div>{{ .Reason }}</div>
+                        {{ end }}
+                        {{ end }}
+                    </td>
                     <td>{{ .Effect }}</td>
                 </tr>
                 {{ end }}

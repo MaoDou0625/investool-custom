@@ -69,10 +69,13 @@ func buildFundDailyAdviceBundle(c *gin.Context) fundDailyAdviceBundle {
 	report := core.BuildFundDailyAdviceReportWithEvidence(c, portfolioContext.AllAdvices, selection.Funds, selection.Evidence, config)
 	report.MarketContext = marketContext
 	report.NewsContext = newsContext
+	industrySignals, industrySignalWarnings := loadFundDailyIndustryPublicSignals(c, report)
+	report.IndustryExpectationSignals = industrySignals
 	report.IndustryExpectationContext = core.BuildFundDailyIndustryExpectationContext(report)
 	report.Warnings = append(report.Warnings, navWarnings...)
 	report.Warnings = append(report.Warnings, marketContext.Warnings...)
 	report.Warnings = append(report.Warnings, newsContext.Warnings...)
+	report.Warnings = append(report.Warnings, industrySignalWarnings...)
 	report.Warnings = append(report.Warnings, report.IndustryExpectationContext.Warnings...)
 	report.Warnings = append(report.Warnings, subscriptionWarnings...)
 	report.Warnings = append(report.Warnings, selection.Warnings...)

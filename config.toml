@@ -46,6 +46,7 @@ env = "localhost"
     ai_candidate_count = 50
     min_candidate_score = 68
     min_core_candidate_score = 75
+    industry_signal_cache_filename = "./fund_daily_industry_signal_cache.json"
     disable_buy_on_non_workday = true
     # Calendar overrides for public holidays and adjusted workdays.
     non_workday_dates = [

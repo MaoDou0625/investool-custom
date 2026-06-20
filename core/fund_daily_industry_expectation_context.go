@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -50,6 +51,11 @@ type FundDailyIndustryExpectationEvidence struct {
 	Value    float64 `json:"value,omitempty"`
 	Weight   float64 `json:"weight,omitempty"`
 	Reason   string  `json:"reason,omitempty"`
+}
+
+type FundDailyIndustryExpectationSignal struct {
+	Theme    string                               `json:"theme"`
+	Evidence FundDailyIndustryExpectationEvidence `json:"evidence"`
 }
 
 type fundDailyIndustryExpectationThemeAgg struct {
@@ -157,6 +163,16 @@ func buildFundDailyIndustryExpectationAggregates(report FundDailyAdviceReport, p
 			aggregates[theme] = agg
 		}
 	}
+	for _, signal := range report.IndustryExpectationSignals {
+		theme := strings.TrimSpace(signal.Theme)
+		if theme == "" || strings.TrimSpace(signal.Evidence.Category) == "" {
+			continue
+		}
+		agg := aggregates[theme]
+		agg.theme = theme
+		agg.evidence = append(agg.evidence, signal.Evidence)
+		aggregates[theme] = agg
+	}
 	return aggregates
 }
 
@@ -182,7 +198,7 @@ func fundDailyIndustryThemesForFund(fund FundDailyAIFund) []string {
 }
 
 func analyzeFundDailyIndustryExpectationTheme(aggregate fundDailyIndustryExpectationThemeAgg, market FundDailyMarketContext, newsContext FundDailyNewsContext) FundDailyIndustryExpectationTheme {
-	evidence := append([]FundDailyIndustryExpectationEvidence{}, aggregate.evidence...)
+	evidence := []FundDailyIndustryExpectationEvidence{}
 	riskScore := 0.0
 	pricingScore := 0.0
 	availableEvidence := 0
@@ -198,6 +214,10 @@ func analyzeFundDailyIndustryExpectationTheme(aggregate fundDailyIndustryExpecta
 		if item.Status == "missing" {
 			coreMissing++
 		}
+	}
+
+	for _, item := range aggregate.evidence {
+		addEvidence(item, fundDailyIndustryExternalRiskDelta(item), fundDailyIndustryExternalPricingDelta(item))
 	}
 
 	exposureWeight := aggregate.exposureWeight
@@ -252,8 +272,12 @@ func analyzeFundDailyIndustryExpectationTheme(aggregate fundDailyIndustryExpecta
 		addEvidence(industryEvidence, industryCycleRiskDelta(industryEvidence), industryCyclePricingDelta(industryEvidence))
 	}
 
-	addEvidence(FundDailyIndustryExpectationEvidence{Category: "valuation_percentile", Status: "missing", Signal: "missing", Weight: 0, Reason: "尚未接入行业估值分位数据；本项不参与打分，只降低置信度。"}, 0, 0)
-	addEvidence(FundDailyIndustryExpectationEvidence{Category: "earnings_revision", Status: "missing", Signal: "missing", Weight: 0, Reason: "尚未接入行业盈利预期修正数据；本项不参与打分，只降低置信度。"}, 0, 0)
+	if !hasFundDailyIndustryEvidenceCategory(evidence, "valuation_percentile") {
+		addEvidence(FundDailyIndustryExpectationEvidence{Category: "valuation_percentile", Status: "missing", Signal: "missing", Weight: 0, Reason: "尚未接入行业估值分位数据；本项不参与打分，只降低置信度。"}, 0, 0)
+	}
+	if !hasFundDailyIndustryEvidenceCategory(evidence, "earnings_revision") {
+		addEvidence(FundDailyIndustryExpectationEvidence{Category: "earnings_revision", Status: "missing", Signal: "missing", Weight: 0, Reason: "尚未接入行业盈利预期修正数据；本项不参与打分，只降低置信度。"}, 0, 0)
+	}
 
 	riskScore = clampFloat(riskScore, 0, 100)
 	pricingScore = clampFloat(pricingScore, -60, 80)
@@ -411,6 +435,68 @@ func industryCyclePricingDelta(evidence FundDailyIndustryExpectationEvidence) fl
 	}
 }
 
+func fundDailyIndustryExternalRiskDelta(evidence FundDailyIndustryExpectationEvidence) float64 {
+	switch evidence.Category {
+	case "valuation_percentile":
+		switch evidence.Signal {
+		case "extreme_expensive":
+			return 24
+		case "expensive":
+			return 16
+		case "elevated":
+			return 8
+		case "cheap":
+			return 4
+		default:
+			return 2
+		}
+	case "earnings_revision":
+		switch evidence.Signal {
+		case "downward_revision":
+			return 18
+		case "upward_revision":
+			return -4
+		case "stable":
+			return 2
+		default:
+			return 0
+		}
+	default:
+		return 0
+	}
+}
+
+func fundDailyIndustryExternalPricingDelta(evidence FundDailyIndustryExpectationEvidence) float64 {
+	switch evidence.Category {
+	case "valuation_percentile":
+		switch evidence.Signal {
+		case "extreme_expensive":
+			return -28
+		case "expensive":
+			return -18
+		case "elevated":
+			return -8
+		case "cheap":
+			return 20
+		default:
+			return 4
+		}
+	case "earnings_revision":
+		switch evidence.Signal {
+		case "downward_revision":
+			return -16
+		case "upward_revision":
+			return 14
+		case "stable":
+			return 6
+		default:
+			return 0
+		}
+	default:
+		return 0
+	}
+}
+
 func fundDailyIndustryExpectationConfidence(availableEvidence int, coreMissing int, riskScore float64) float64 {
 	confidence := 30.0 + float64(availableEvidence)*8
 	confidence -= float64(coreMissing) * 6
@@ -476,11 +562,20 @@ func fundDailyIndustryThemeReasons(theme string, riskPressure string, pricingSta
 func fundDailyIndustryThemeWarnings(evidence []FundDailyIndustryExpectationEvidence) []string {
 	warnings := []string{}
 	for _, item := range evidence {
-		if item.Status == "missing" {
+		if item.Status == "missing" || item.Status == "partial" {
 			warnings = append(warnings, item.Reason)
 		}
 	}
 	return compactDailyReasons(warnings, 3)
+}
+
+func hasFundDailyIndustryEvidenceCategory(evidence []FundDailyIndustryExpectationEvidence, category string) bool {
+	for _, item := range evidence {
+		if item.Category == category {
+			return true
+		}
+	}
+	return false
 }
 
 func fundDailyIndustryExpectationReasons(themes []FundDailyIndustryExpectationTheme) []string {
