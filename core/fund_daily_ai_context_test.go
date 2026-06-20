@@ -145,3 +145,29 @@ func TestBuildFundDailyAIContextIncludesNewsContext(t *testing.T) {
 		t.Fatalf("expected news article evidence in AI context")
 	}
 }
+
+func TestBuildFundDailyAIContextIncludesIndustryExpectationContext(t *testing.T) {
+	report := FundDailyAdviceReport{
+		Config: DefaultFundDailyAdviceConfig(),
+		IndustryExpectationContext: FundDailyIndustryExpectationContext{
+			Status:           "ready",
+			Summary:          "industry expectation summary",
+			BudgetMultiplier: 0.92,
+			Themes: []FundDailyIndustryExpectationTheme{
+				{Theme: "AI", PricingState: FundDailyIndustryPricingNotFullyPriced, RiskPressure: "high", Confidence: 64},
+			},
+		},
+	}
+
+	contextData := BuildFundDailyAIContext(report)
+
+	if contextData.IndustryExpectationContext.Status != "ready" {
+		t.Fatalf("expected industry expectation context to be carried into AI context")
+	}
+	if contextData.IndustryExpectationContext.BudgetMultiplier != 0.92 {
+		t.Fatalf("expected industry budget multiplier 0.92, got %.2f", contextData.IndustryExpectationContext.BudgetMultiplier)
+	}
+	if len(contextData.IndustryExpectationContext.Themes) != 1 {
+		t.Fatalf("expected industry theme evidence in AI context")
+	}
+}

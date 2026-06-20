@@ -48,6 +48,13 @@ func BuildFundDailyLocalDecision(contextData FundDailyAIContext) FundDailyAIDeci
 		reasons = append(reasons, contextData.NewsContext.Summary)
 		reasons = append(reasons, compactDailyReasons(contextData.NewsContext.Reasons, 2)...)
 	}
+	if contextData.IndustryExpectationContext.Status == "ready" {
+		reasons = append(reasons, contextData.IndustryExpectationContext.Summary)
+		reasons = append(reasons, compactDailyReasons(contextData.IndustryExpectationContext.Reasons, 2)...)
+		if contextData.IndustryExpectationContext.BudgetMultiplier < 1 {
+			riskNotes = append(riskNotes, "行业风险定价模块显示部分风险尚未充分反映，今日买入预算按软约束压缩。")
+		}
+	}
 	if signals.PortfolioRecentRunup {
 		reasons = append(reasons, "持有基金近 1/3/6 月涨幅较高，今天优先控制同方向加仓节奏。")
 	}
@@ -66,17 +73,27 @@ func BuildFundDailyLocalDecision(contextData FundDailyAIContext) FundDailyAIDeci
 	}
 	actions = append(actions, portfolioActions...)
 
-	candidateScores := scoreFundDailyLocalCandidates(contextData.Candidates, contextData.Portfolio, signals, contextData.MarketContext, contextData.NewsContext)
+	candidateScores := scoreFundDailyLocalCandidates(contextData.Candidates, contextData.Portfolio, signals, contextData.MarketContext, contextData.NewsContext, contextData.IndustryExpectationContext)
 	buyActions, usedBudget := buildFundDailyLocalRebalanceBuyActions(contextData, candidateScores, budget, signals)
 	actions = mergeFundDailyLocalBuyActions(actions, buyActions)
+	trimActions := buildFundDailyLocalProfitTakingActions(contextData.Portfolio, signals, buyActions, !contextData.WorkdayGuard.BlocksBuy())
+	actions = mergeFundDailyLocalTrimActions(actions, trimActions)
 	watchAction, ok := buildFundDailyLocalWatchAction(contextData.Candidates)
 	if ok {
 		actions = append(actions, watchAction)
 	}
+	if len(trimActions) > 0 {
+		reasons = append(reasons, "部分已持基金已有浮盈和短期涨幅，今天可以在买入分散仓位的同时小比例止盈。")
+		riskNotes = append(riskNotes, "止盈金额仅用于降低单方向暴露，不自动转成新的买入预算。")
+	}
 
-	summary := fundDailyLocalDecisionSummary(usedBudget, len(buyActions), signals)
+	summary := fundDailyLocalDecisionSummary(usedBudget, len(buyActions), len(trimActions), signals)
 	if contextData.WorkdayGuard.BlocksBuy() {
-		summary = "今天是非工作日，不安排基金买入；仅保留持有和观察。"
+		if len(trimActions) > 0 {
+			summary = fmt.Sprintf("今天是非工作日，不安排基金买入；保留 %d 只持仓的减仓/止盈参考。", len(trimActions))
+		} else {
+			summary = "今天是非工作日，不安排基金买入；仅保留持有和观察。"
+		}
 	}
 
 	decision := FundDailyAIDecision{
@@ -168,6 +185,9 @@ func chooseFundDailyLocalBudget(contextData FundDailyAIContext, signals fundDail
 	if contextData.NewsContext.Status == "ready" && contextData.NewsContext.BudgetMultiplier > 0 {
 		budget = roundDailyAmount(budget * contextData.NewsContext.BudgetMultiplier)
 	}
+	if contextData.IndustryExpectationContext.Status == "ready" && contextData.IndustryExpectationContext.BudgetMultiplier > 0 {
+		budget = roundDailyAmount(budget * contextData.IndustryExpectationContext.BudgetMultiplier)
+	}
 	if budget > contextData.Constraints.MaxDailyBuyAmount {
 		budget = floorDailyAmount(contextData.Constraints.MaxDailyBuyAmount)
 	}
@@ -197,7 +217,7 @@ func fundDailyLocalHoldAction(fund FundDailyAIFund, signals fundDailyLocalSignal
 	}
 }
 
-func scoreFundDailyLocalCandidates(candidates []FundDailyAIFund, portfolio []FundDailyAIFund, signals fundDailyLocalSignals, market FundDailyMarketContext, newsContext FundDailyNewsContext) []fundDailyLocalCandidateScore {
+func scoreFundDailyLocalCandidates(candidates []FundDailyAIFund, portfolio []FundDailyAIFund, signals fundDailyLocalSignals, market FundDailyMarketContext, newsContext FundDailyNewsContext, industryContext FundDailyIndustryExpectationContext) []fundDailyLocalCandidateScore {
 	filtered := make([]FundDailyAIFund, 0, len(candidates))
 	for _, fund := range candidates {
 		if !fund.CanSubscribe || fund.SuggestedBuyCeiling <= 0 || fund.Score < 65 {
@@ -238,6 +258,7 @@ func scoreFundDailyLocalCandidates(candidates []FundDailyAIFund, portfolio []Fun
 		}
 		score += fundDailyMarketTiltScoreForFund(fund, market)
 		score += fundDailyNewsTiltScoreForFund(fund, newsContext)
+		score += fundDailyIndustryExpectationTiltScoreForFund(fund, industryContext)
 		scores = append(scores, fundDailyLocalCandidateScore{fund: fund, score: score})
 	}
 	sort.SliceStable(scores, func(i, j int) bool {
@@ -354,22 +375,25 @@ func buildFundDailyLocalWatchAction(candidates []FundDailyAIFund) (FundDailyAIOu
 }
 
 type fundDailyDecisionBuyLimit struct {
-	amount       float64
-	canSubscribe bool
+	buyAmount     float64
+	currentAmount float64
+	canSubscribe  bool
 }
 
 func validateFundDailyLocalDecision(decision FundDailyAIDecision, contextData FundDailyAIContext) FundDailyAIDecision {
 	limits := map[string]fundDailyDecisionBuyLimit{}
 	for _, fund := range contextData.Portfolio {
 		limits[fundDailyDecisionActionKey(fundDailyBudgetSourcePortfolio, fund.Code)] = fundDailyDecisionBuyLimit{
-			amount:       fund.SuggestedBuyCeiling,
-			canSubscribe: fund.CanSubscribe,
+			buyAmount:     fund.SuggestedBuyCeiling,
+			currentAmount: fund.CurrentAmount,
+			canSubscribe:  fund.CanSubscribe,
 		}
 	}
 	for _, fund := range contextData.Candidates {
 		limits[fundDailyDecisionActionKey(fundDailyBudgetSourceCandidate, fund.Code)] = fundDailyDecisionBuyLimit{
-			amount:       fund.SuggestedBuyCeiling,
-			canSubscribe: fund.CanSubscribe,
+			buyAmount:     fund.SuggestedBuyCeiling,
+			currentAmount: fund.CurrentAmount,
+			canSubscribe:  fund.CanSubscribe,
 		}
 	}
 
@@ -383,7 +407,28 @@ func validateFundDailyLocalDecision(decision FundDailyAIDecision, contextData Fu
 		limit, ok := limits[key]
 		if !ok {
 			action.Amount = 0
-			decision.Warnings = append(decision.Warnings, fmt.Sprintf("%s 不在本次持有/候选数据集中，买入金额已清零。", action.Code))
+			decision.Warnings = append(decision.Warnings, fmt.Sprintf("%s 不在本次持有/候选数据集中，操作金额已清零。", action.Code))
+			continue
+		}
+		if action.Action == "trim" || action.Action == "sell" {
+			if action.Source != fundDailyBudgetSourcePortfolio || limit.currentAmount <= 0 {
+				action.Amount = 0
+				decision.Warnings = append(decision.Warnings, fmt.Sprintf("%s 不是有效持仓，卖出金额已清零。", action.Code))
+				continue
+			}
+			sellCap := limit.currentAmount
+			if action.Action == "trim" {
+				sellCap = minPositive(limit.currentAmount*0.30, limit.currentAmount)
+			}
+			if action.Amount > sellCap {
+				action.Amount = floorDailyAmount(sellCap)
+				decision.Warnings = append(decision.Warnings, fmt.Sprintf("%s 超过本次减仓上限，已压缩到 %.2f 元。", action.Code, action.Amount))
+			}
+			continue
+		}
+		if action.Action != "buy" {
+			action.Amount = 0
+			decision.Warnings = append(decision.Warnings, fmt.Sprintf("%s 的非买入动作不应带正金额，金额已清零。", action.Code))
 			continue
 		}
 		if !limit.canSubscribe {
@@ -391,8 +436,8 @@ func validateFundDailyLocalDecision(decision FundDailyAIDecision, contextData Fu
 			decision.Warnings = append(decision.Warnings, fmt.Sprintf("%s 当前不是开放申购状态，买入金额已清零。", action.Code))
 			continue
 		}
-		if action.Amount > limit.amount {
-			action.Amount = floorDailyAmount(limit.amount)
+		if action.Amount > limit.buyAmount {
+			action.Amount = floorDailyAmount(limit.buyAmount)
 			decision.Warnings = append(decision.Warnings, fmt.Sprintf("%s 超过单基金上限，已压缩到 %.2f 元。", action.Code, action.Amount))
 		}
 		total += action.Amount
@@ -402,7 +447,7 @@ func validateFundDailyLocalDecision(decision FundDailyAIDecision, contextData Fu
 		total = 0
 		for idx := range decision.Actions {
 			action := &decision.Actions[idx]
-			if action.Amount <= 0 {
+			if action.Action != "buy" || action.Amount <= 0 {
 				continue
 			}
 			if remaining <= 0 {
@@ -424,9 +469,15 @@ func validateFundDailyLocalDecision(decision FundDailyAIDecision, contextData Fu
 	return decision
 }
 
-func fundDailyLocalDecisionSummary(budget float64, buyCount int, signals fundDailyLocalSignals) string {
+func fundDailyLocalDecisionSummary(budget float64, buyCount int, trimCount int, signals fundDailyLocalSignals) string {
 	if budget <= 0 || buyCount == 0 {
+		if trimCount > 0 {
+			return fmt.Sprintf("今天不安排新增买入，但建议对 %d 只已有浮盈且波动偏高的持仓小比例止盈。", trimCount)
+		}
 		return "今天不安排新增买入，先观察持仓和候选方向的波动。"
+	}
+	if trimCount > 0 {
+		return fmt.Sprintf("今天建议总买入 %.2f 元，同时对 %d 只已有浮盈的持仓小比例止盈。", budget, trimCount)
 	}
 	if signals.TechConcentrated {
 		return fmt.Sprintf("今天建议总买入 %.2f 元，只做小额分散，不继续集中加 AI/光模块方向。", budget)

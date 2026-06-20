@@ -5,20 +5,21 @@ import "fmt"
 const fundDailyAIContextSchemaVersion = "fund_daily_advice_context.v1"
 
 type FundDailyAIContext struct {
-	SchemaVersion    string                      `json:"schema_version"`
-	GeneratedAt      string                      `json:"generated_at"`
-	WorkdayGuard     FundDailyWorkdayGuard       `json:"workday_guard"`
-	Goal             FundDailyAIGoal             `json:"goal"`
-	Constraints      FundDailyAIConstraints      `json:"constraints"`
-	PortfolioSummary FundDailyAIPortfolioSummary `json:"portfolio_summary"`
-	BudgetInput      FundDailyAIBudgetInput      `json:"budget_input"`
-	MarketContext    FundDailyMarketContext      `json:"market_context"`
-	NewsContext      FundDailyNewsContext        `json:"news_context"`
-	Portfolio        []FundDailyAIFund           `json:"portfolio"`
-	Candidates       []FundDailyAIFund           `json:"candidates"`
-	OutputContract   FundDailyAIOutputContract   `json:"output_contract"`
-	ValidationRules  []string                    `json:"validation_rules"`
-	Warnings         []string                    `json:"warnings,omitempty"`
+	SchemaVersion              string                              `json:"schema_version"`
+	GeneratedAt                string                              `json:"generated_at"`
+	WorkdayGuard               FundDailyWorkdayGuard               `json:"workday_guard"`
+	Goal                       FundDailyAIGoal                     `json:"goal"`
+	Constraints                FundDailyAIConstraints              `json:"constraints"`
+	PortfolioSummary           FundDailyAIPortfolioSummary         `json:"portfolio_summary"`
+	BudgetInput                FundDailyAIBudgetInput              `json:"budget_input"`
+	MarketContext              FundDailyMarketContext              `json:"market_context"`
+	NewsContext                FundDailyNewsContext                `json:"news_context"`
+	IndustryExpectationContext FundDailyIndustryExpectationContext `json:"industry_expectation_context"`
+	Portfolio                  []FundDailyAIFund                   `json:"portfolio"`
+	Candidates                 []FundDailyAIFund                   `json:"candidates"`
+	OutputContract             FundDailyAIOutputContract           `json:"output_contract"`
+	ValidationRules            []string                            `json:"validation_rules"`
+	Warnings                   []string                            `json:"warnings,omitempty"`
 }
 
 type FundDailyAIGoal struct {
@@ -66,6 +67,8 @@ type FundDailyAIFund struct {
 	SuggestedSellAmount       float64               `json:"suggested_sell_amount"`
 	CurrentAmount             float64               `json:"current_amount"`
 	CurrentWeight             float64               `json:"current_weight_percent"`
+	ProfitRatio               float64               `json:"profit_ratio_percent"`
+	ProfitAmount              float64               `json:"profit_amount"`
 	SuggestedWeight           float64               `json:"suggested_weight_percent"`
 	Score                     int                   `json:"score"`
 	RiskLevel                 string                `json:"risk_level"`
@@ -226,13 +229,14 @@ func BuildFundDailyAIContext(report FundDailyAdviceReport) FundDailyAIContext {
 				"ProgramBudget is a deterministic reference, not a required buy amount.",
 			},
 		},
-		MarketContext:   report.MarketContext,
-		NewsContext:     report.NewsContext,
-		Portfolio:       buildFundDailyAIFunds(portfolioActions, fundDailyBudgetSourcePortfolio),
-		Candidates:      buildFundDailyAIFunds(candidateActions, fundDailyBudgetSourceCandidate),
-		OutputContract:  fundDailyAIOutputContract(),
-		ValidationRules: fundDailyAIValidationRules(maxBudget),
-		Warnings:        report.Warnings,
+		MarketContext:              report.MarketContext,
+		NewsContext:                report.NewsContext,
+		IndustryExpectationContext: report.IndustryExpectationContext,
+		Portfolio:                  buildFundDailyAIFunds(portfolioActions, fundDailyBudgetSourcePortfolio),
+		Candidates:                 buildFundDailyAIFunds(candidateActions, fundDailyBudgetSourceCandidate),
+		OutputContract:             fundDailyAIOutputContract(),
+		ValidationRules:            fundDailyAIValidationRules(maxBudget),
+		Warnings:                   report.Warnings,
 	}
 }
 
@@ -254,6 +258,8 @@ func fundDailyAIFundFromAction(action FundDailyAction, source string) FundDailyA
 		ProgramActionLevel:        action.ActionLevel,
 		CurrentAmount:             action.CurrentAmount,
 		CurrentWeight:             action.CurrentWeight,
+		ProfitRatio:               action.ProfitRatio,
+		ProfitAmount:              action.ProfitAmount,
 		SuggestedWeight:           action.SuggestedWeight,
 		Score:                     action.Score,
 		RiskLevel:                 action.RiskLevel,
@@ -352,6 +358,7 @@ func fundDailyAIValidationRules(maxBudget float64) []string {
 		"Actions may only reference codes present in portfolio or candidates.",
 		"Class C should be preferred over class A when both share the same fund base and both are available.",
 		"daily_buy_budget may be 0; never force a buy when signals are weak.",
+		"Trim and sell amounts must reference portfolio funds and use a positive amount field.",
 		"Sell/trim suggestions are advisory only and must not be converted into new buy budget.",
 	}
 }

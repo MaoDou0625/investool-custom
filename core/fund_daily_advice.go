@@ -29,24 +29,25 @@ type FundDailyAdviceConfig struct {
 }
 
 type FundDailyAdviceReport struct {
-	GeneratedAt              time.Time
-	Config                   FundDailyAdviceConfig
-	WorkdayGuard             FundDailyWorkdayGuard
-	CurrentAmount            float64
-	InvestableAmount         float64
-	CashRoom                 float64
-	CashBufferAmount         float64
-	DailyBuyBudget           float64
-	DailyBuyBudgetReasons    []string
-	DecisionPortfolioActions []FundDailyAction
-	DecisionCandidateActions []FundDailyAction
-	PortfolioActions         []FundDailyAction
-	CandidateActions         []FundDailyAction
-	AIContext                FundDailyAIContext
-	AIDecision               FundDailyAIDecision
-	MarketContext            FundDailyMarketContext
-	NewsContext              FundDailyNewsContext
-	Warnings                 []string
+	GeneratedAt                time.Time
+	Config                     FundDailyAdviceConfig
+	WorkdayGuard               FundDailyWorkdayGuard
+	CurrentAmount              float64
+	InvestableAmount           float64
+	CashRoom                   float64
+	CashBufferAmount           float64
+	DailyBuyBudget             float64
+	DailyBuyBudgetReasons      []string
+	DecisionPortfolioActions   []FundDailyAction
+	DecisionCandidateActions   []FundDailyAction
+	PortfolioActions           []FundDailyAction
+	CandidateActions           []FundDailyAction
+	AIContext                  FundDailyAIContext
+	AIDecision                 FundDailyAIDecision
+	MarketContext              FundDailyMarketContext
+	NewsContext                FundDailyNewsContext
+	IndustryExpectationContext FundDailyIndustryExpectationContext
+	Warnings                   []string
 }
 
 type FundDailyAction struct {
@@ -72,6 +73,8 @@ type FundDailyAction struct {
 	SuggestedWeight           float64
 	CurrentAmount             float64
 	CurrentWeight             float64
+	ProfitRatio               float64
+	ProfitAmount              float64
 	Score                     int
 	RiskLevel                 string
 	ExpectedAnnualReturn      float64
@@ -340,6 +343,8 @@ func dailyActionFromAdvice(advice FundPortfolioAdvice, source string, report Fun
 		HasExpectedReturn:    advice.HasExpectedAnnualReturn,
 		CurrentAmount:        advice.CurrentAmount,
 		CurrentWeight:        advice.CurrentWeight,
+		ProfitRatio:          advice.ProfitRatio,
+		ProfitAmount:         advice.ProfitAmount,
 		Reasons:              compactDailyReasons(advice.Reasons, 3),
 		Warnings:             advice.Warnings,
 	}

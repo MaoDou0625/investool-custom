@@ -267,6 +267,58 @@ func TestBuildFundDailyLocalDecisionDisablesBuysOnNonWorkday(t *testing.T) {
 	}
 }
 
+func TestBuildFundDailyLocalDecisionKeepsExplicitSellReferenceOnNonWorkday(t *testing.T) {
+	contextData := FundDailyAIContext{
+		WorkdayGuard: BuildFundDailyWorkdayGuard(time.Date(2026, 6, 14, 11, 0, 0, 0, time.Local), true, DefaultFundDailyWorkdayCalendar()),
+		Constraints: FundDailyAIConstraints{
+			MaxDailyBuyAmount: 500,
+			CashRoom:          4000,
+		},
+		BudgetInput: FundDailyAIBudgetInput{
+			ProgramBudget: 400,
+		},
+		Portfolio: []FundDailyAIFund{
+			{
+				Code:                "300001",
+				Name:                "已有明确减仓信号C",
+				FundType:            "指数型-股票",
+				ProgramAction:       "sell",
+				ProgramActionLevel:  "sell",
+				CurrentAmount:       500,
+				SuggestedSellAmount: 250,
+				CanSubscribe:        false,
+				ProfitRatio:         30,
+				ProfitAmount:        150,
+				RecentReturns:       FundDailyAIReturns{Month1: 18, Month3: 36, Month6: 58},
+				Drawdown:            30,
+				Stddev:              30,
+			},
+		},
+		Candidates: []FundDailyAIFund{
+			{
+				Code:                "100001",
+				Name:                "工作日才允许买入C",
+				SuggestedBuyCeiling: 300,
+				SubscriptionStatus:  "开放申购",
+				CanSubscribe:        true,
+				Score:               90,
+				StrategyScore:       90,
+				NetAssetsScaleYi:    5,
+			},
+		},
+	}
+
+	decision := BuildFundDailyLocalDecision(contextData)
+
+	if decision.DailyBuyBudget != 0 {
+		t.Fatalf("expected zero buy budget on non-workday, got %.2f", decision.DailyBuyBudget)
+	}
+	if hasDailyDecisionBuy(decision, "100001") {
+		t.Fatalf("expected no buy action on non-workday, actions=%+v", decision.Actions)
+	}
+	assertDailyDecisionAction(t, decision, "300001", "sell", 250)
+}
+
 func TestBuildFundDailyLocalDecisionPrefersExistingDiversifierOverSimilarNewFund(t *testing.T) {
 	contextData := FundDailyAIContext{
 		Constraints: FundDailyAIConstraints{
@@ -331,6 +383,64 @@ func TestBuildFundDailyLocalDecisionPrefersExistingDiversifierOverSimilarNewFund
 	assertDailyDecisionAction(t, decision, "200001", "buy", 60)
 	if hasDailyDecisionBuy(decision, "100001") {
 		t.Fatalf("expected new fund with same diversification role to lose to existing small holding; actions=%+v", decision.Actions)
+	}
+}
+
+func TestBuildFundDailyLocalDecisionCanBuyAndTrimProfitableHolding(t *testing.T) {
+	contextData := FundDailyAIContext{
+		Constraints: FundDailyAIConstraints{
+			MaxDailyBuyAmount: 500,
+			CashRoom:          4000,
+		},
+		BudgetInput: FundDailyAIBudgetInput{
+			ProgramBudget: 400,
+		},
+		Portfolio: []FundDailyAIFund{
+			{
+				Code:          "300001",
+				Name:          "已有AI高弹性持仓C",
+				FundType:      "指数型-股票",
+				CurrentAmount: 500,
+				CurrentWeight: 12,
+				ProfitRatio:   28,
+				ProfitAmount:  140,
+				CanSubscribe:  false,
+				Score:         90,
+				StrategyScore: 90,
+				Drawdown:      28,
+				Stddev:        31,
+				RecentReturns: FundDailyAIReturns{Month1: 18, Month3: 36, Month6: 58},
+				TopStocks:     []FundDailyTopHolding{{Name: "新易盛", HoldRatio: 11}, {Name: "中际旭创", HoldRatio: 10}},
+			},
+		},
+		Candidates: []FundDailyAIFund{
+			{
+				Code:                "100001",
+				Name:                "稳健分散候选C",
+				FundType:            "混合型",
+				SuggestedBuyCeiling: 300,
+				SubscriptionStatus:  "开放申购",
+				CanSubscribe:        true,
+				Score:               90,
+				StrategyScore:       90,
+				StrategyTheme:       "稳健分散",
+				Drawdown:            12,
+				Stddev:              13,
+				NetAssetsScaleYi:    5,
+				RecentReturns:       FundDailyAIReturns{Month1: 4, Month3: 8, Month6: 18},
+			},
+		},
+	}
+
+	decision := BuildFundDailyLocalDecision(contextData)
+
+	if decision.DailyBuyBudget != 60 {
+		t.Fatalf("expected only buy amount to count toward daily buy budget, got %.2f", decision.DailyBuyBudget)
+	}
+	assertDailyDecisionAction(t, decision, "100001", "buy", 60)
+	assertDailyDecisionAction(t, decision, "300001", "trim", 100)
+	if len(decision.RiskNotes) == 0 {
+		t.Fatalf("expected risk note for profit taking, got %+v", decision.RiskNotes)
 	}
 }
 
