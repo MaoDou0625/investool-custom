@@ -119,15 +119,28 @@ func fundDailyLocalProfitTakingOptionForFund(fund FundDailyAIFund, signals fundD
 
 func fundDailyLocalProfitTakingActionFromOption(option fundDailyLocalProfitTakingOption) FundDailyAIOutputAction {
 	fund := option.fund
+	shareAmount := fundDailyRedeemShareAmount(option.amount, fund)
+	riskNote := fmt.Sprintf("当前浮盈 %.1f%% / %.2f 元；近 1/3/6 月收益 %.1f%% / %.1f%% / %.1f%%，回撤 %.1f%%，波动 %.1f%%。", fund.ProfitRatio, fund.ProfitAmount, fund.RecentReturns.Month1, fund.RecentReturns.Month3, fund.RecentReturns.Month6, fund.Drawdown, fund.Stddev)
+	if shareAmount > 0 {
+		basis := fundDailyRedeemShareBasisText(fund)
+		if basis != "" {
+			riskNote += fmt.Sprintf(" 减仓操作按 %.2f 份填写，%.2f 元为组合风控估算值，%s。", shareAmount, option.amount, basis)
+		} else {
+			riskNote += fmt.Sprintf(" 减仓操作按 %.2f 份填写，%.2f 元为组合风控估算值。", shareAmount, option.amount)
+		}
+	} else {
+		riskNote += fmt.Sprintf(" 减仓参考金额 %.2f 元；份额需在交易前按账户最新净值手动折算。", option.amount)
+	}
 	return FundDailyAIOutputAction{
-		Code:     fund.Code,
-		Name:     fund.Name,
-		FundType: fund.FundType,
-		Source:   fundDailyBudgetSourcePortfolio,
-		Action:   option.action,
-		Amount:   option.amount,
-		Reason:   fundDailyLocalProfitTakingReason(option),
-		RiskNote: fmt.Sprintf("当前浮盈 %.1f%% / %.2f 元；近 1/3/6 月收益 %.1f%% / %.1f%% / %.1f%%，回撤 %.1f%%，波动 %.1f%%。", fund.ProfitRatio, fund.ProfitAmount, fund.RecentReturns.Month1, fund.RecentReturns.Month3, fund.RecentReturns.Month6, fund.Drawdown, fund.Stddev),
+		Code:        fund.Code,
+		Name:        fund.Name,
+		FundType:    fund.FundType,
+		Source:      fundDailyBudgetSourcePortfolio,
+		Action:      option.action,
+		Amount:      option.amount,
+		ShareAmount: shareAmount,
+		Reason:      fundDailyLocalProfitTakingReason(option),
+		RiskNote:    riskNote,
 	}
 }
 

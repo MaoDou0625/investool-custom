@@ -66,6 +66,7 @@ type FundDailyAIFund struct {
 	SuggestedBuyCeiling       float64               `json:"suggested_buy_ceiling"`
 	SuggestedSellAmount       float64               `json:"suggested_sell_amount"`
 	CurrentAmount             float64               `json:"current_amount"`
+	HoldingShares             float64               `json:"holding_shares,omitempty"`
 	CurrentWeight             float64               `json:"current_weight_percent"`
 	ProfitRatio               float64               `json:"profit_ratio_percent"`
 	ProfitAmount              float64               `json:"profit_amount"`
@@ -161,8 +162,10 @@ type FundDailyAIOutputAction struct {
 	Source   string  `json:"source"`
 	Action   string  `json:"action"`
 	Amount   float64 `json:"amount"`
-	Reason   string  `json:"reason"`
-	RiskNote string  `json:"risk_note"`
+	// ShareAmount is the operational quantity for trim/sell actions.
+	ShareAmount float64 `json:"share_amount,omitempty"`
+	Reason      string  `json:"reason"`
+	RiskNote    string  `json:"risk_note"`
 }
 
 func BuildFundDailyAIContext(report FundDailyAdviceReport) FundDailyAIContext {
@@ -257,6 +260,7 @@ func fundDailyAIFundFromAction(action FundDailyAction, source string) FundDailyA
 		ProgramAction:             action.Action,
 		ProgramActionLevel:        action.ActionLevel,
 		CurrentAmount:             action.CurrentAmount,
+		HoldingShares:             action.HoldingShares,
 		CurrentWeight:             action.CurrentWeight,
 		ProfitRatio:               action.ProfitRatio,
 		ProfitAmount:              action.ProfitAmount,
@@ -346,6 +350,7 @@ func fundDailyAIOutputContract() FundDailyAIOutputContract {
 			"amount",
 			"reason",
 			"risk_note",
+			"share_amount",
 		},
 		AllowedActions: []string{"buy", "hold", "watch", "trim", "sell", "skip"},
 	}
@@ -358,7 +363,7 @@ func fundDailyAIValidationRules(maxBudget float64) []string {
 		"Actions may only reference codes present in portfolio or candidates.",
 		"Class C should be preferred over class A when both share the same fund base and both are available.",
 		"daily_buy_budget may be 0; never force a buy when signals are weak.",
-		"Trim and sell amounts must reference portfolio funds and use a positive amount field.",
+		"Trim and sell amounts must reference portfolio funds; amount is an estimated CNY value and share_amount is the redeemable fund-share quantity when holdings data is available.",
 		"Sell/trim suggestions are advisory only and must not be converted into new buy budget.",
 	}
 }

@@ -73,6 +73,7 @@ type FundDailyAction struct {
 	SuggestedAmount           float64
 	SuggestedWeight           float64
 	CurrentAmount             float64
+	HoldingShares             float64
 	CurrentWeight             float64
 	ProfitRatio               float64
 	ProfitAmount              float64
@@ -343,6 +344,7 @@ func dailyActionFromAdvice(advice FundPortfolioAdvice, source string, report Fun
 		ExpectedAnnualReturn: advice.ExpectedAnnualReturn,
 		HasExpectedReturn:    advice.HasExpectedAnnualReturn,
 		CurrentAmount:        advice.CurrentAmount,
+		HoldingShares:        advice.Item.HoldingShares,
 		CurrentWeight:        advice.CurrentWeight,
 		ProfitRatio:          advice.ProfitRatio,
 		ProfitAmount:         advice.ProfitAmount,

@@ -377,6 +377,8 @@ func buildFundDailyLocalWatchAction(candidates []FundDailyAIFund) (FundDailyAIOu
 type fundDailyDecisionBuyLimit struct {
 	buyAmount     float64
 	currentAmount float64
+	holdingShares float64
+	unitNAV       float64
 	canSubscribe  bool
 }
 
@@ -386,6 +388,8 @@ func validateFundDailyLocalDecision(decision FundDailyAIDecision, contextData Fu
 		limits[fundDailyDecisionActionKey(fundDailyBudgetSourcePortfolio, fund.Code)] = fundDailyDecisionBuyLimit{
 			buyAmount:     fund.SuggestedBuyCeiling,
 			currentAmount: fund.CurrentAmount,
+			holdingShares: fund.HoldingShares,
+			unitNAV:       fund.UnitNAV,
 			canSubscribe:  fund.CanSubscribe,
 		}
 	}
@@ -393,6 +397,8 @@ func validateFundDailyLocalDecision(decision FundDailyAIDecision, contextData Fu
 		limits[fundDailyDecisionActionKey(fundDailyBudgetSourceCandidate, fund.Code)] = fundDailyDecisionBuyLimit{
 			buyAmount:     fund.SuggestedBuyCeiling,
 			currentAmount: fund.CurrentAmount,
+			holdingShares: fund.HoldingShares,
+			unitNAV:       fund.UnitNAV,
 			canSubscribe:  fund.CanSubscribe,
 		}
 	}
@@ -413,6 +419,7 @@ func validateFundDailyLocalDecision(decision FundDailyAIDecision, contextData Fu
 		if action.Action == "trim" || action.Action == "sell" {
 			if action.Source != fundDailyBudgetSourcePortfolio || limit.currentAmount <= 0 {
 				action.Amount = 0
+				action.ShareAmount = 0
 				decision.Warnings = append(decision.Warnings, fmt.Sprintf("%s 不是有效持仓，卖出金额已清零。", action.Code))
 				continue
 			}
@@ -422,7 +429,11 @@ func validateFundDailyLocalDecision(decision FundDailyAIDecision, contextData Fu
 			}
 			if action.Amount > sellCap {
 				action.Amount = floorDailyAmount(sellCap)
+				action.ShareAmount = fundDailyRedeemShareAmountFrom(action.Amount, limit.currentAmount, limit.holdingShares, limit.unitNAV)
 				decision.Warnings = append(decision.Warnings, fmt.Sprintf("%s 超过本次减仓上限，已压缩到 %.2f 元。", action.Code, action.Amount))
+			}
+			if action.ShareAmount <= 0 {
+				action.ShareAmount = fundDailyRedeemShareAmountFrom(action.Amount, limit.currentAmount, limit.holdingShares, limit.unitNAV)
 			}
 			continue
 		}
@@ -575,6 +586,15 @@ func (d FundDailyAIDecision) DailyBuyBudgetText() string {
 }
 
 func (a FundDailyAIOutputAction) AmountText() string {
+	if a.Action == "trim" || a.Action == "sell" {
+		if a.ShareAmount > 0 {
+			return fmt.Sprintf("%.2f份", a.ShareAmount)
+		}
+		if a.Amount > 0 {
+			return fmt.Sprintf("约%.2f元", a.Amount)
+		}
+		return "--"
+	}
 	if a.Amount == 0 {
 		return "--"
 	}

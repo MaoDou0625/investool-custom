@@ -1,6 +1,7 @@
 package core
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -401,6 +402,7 @@ func TestBuildFundDailyLocalDecisionCanBuyAndTrimProfitableHolding(t *testing.T)
 				Name:          "已有AI高弹性持仓C",
 				FundType:      "指数型-股票",
 				CurrentAmount: 500,
+				HoldingShares: 250,
 				CurrentWeight: 12,
 				ProfitRatio:   28,
 				ProfitAmount:  140,
@@ -439,6 +441,16 @@ func TestBuildFundDailyLocalDecisionCanBuyAndTrimProfitableHolding(t *testing.T)
 	}
 	assertDailyDecisionAction(t, decision, "100001", "buy", 60)
 	assertDailyDecisionAction(t, decision, "300001", "trim", 100)
+	trim := findDailyDecisionAction(t, decision, "300001")
+	if trim.ShareAmount != 50 {
+		t.Fatalf("expected trim share amount 50.00, got %.2f; action=%+v", trim.ShareAmount, trim)
+	}
+	if trim.AmountText() != "50.00份" {
+		t.Fatalf("expected trim amount text in shares, got %q", trim.AmountText())
+	}
+	if !strings.Contains(trim.RiskNote, "100.00 元") || !strings.Contains(trim.RiskNote, "50.00 份") {
+		t.Fatalf("expected trim risk note to retain amount and share basis, got %q", trim.RiskNote)
+	}
 	if len(decision.RiskNotes) == 0 {
 		t.Fatalf("expected risk note for profit taking, got %+v", decision.RiskNotes)
 	}
@@ -471,16 +483,21 @@ func TestFundDailyLocalDiversificationRoleFallsBackWhenThemeIsMissing(t *testing
 
 func assertDailyDecisionAction(t *testing.T, decision FundDailyAIDecision, code string, action string, amount float64) {
 	t.Helper()
+	item := findDailyDecisionAction(t, decision, code)
+	if item.Action != action || item.Amount != amount {
+		t.Fatalf("expected %s %s %.2f, got %s %.2f; actions=%+v", code, action, amount, item.Action, item.Amount, decision.Actions)
+	}
+}
+
+func findDailyDecisionAction(t *testing.T, decision FundDailyAIDecision, code string) FundDailyAIOutputAction {
+	t.Helper()
 	for _, item := range decision.Actions {
-		if item.Code != code {
-			continue
+		if item.Code == code {
+			return item
 		}
-		if item.Action != action || item.Amount != amount {
-			t.Fatalf("expected %s %s %.2f, got %s %.2f; actions=%+v", code, action, amount, item.Action, item.Amount, decision.Actions)
-		}
-		return
 	}
 	t.Fatalf("missing action for %s", code)
+	return FundDailyAIOutputAction{}
 }
 
 func hasDailyDecisionBuy(decision FundDailyAIDecision, code string) bool {
