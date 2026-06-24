@@ -387,6 +387,48 @@ func TestBuildFundDailyLocalDecisionPrefersExistingDiversifierOverSimilarNewFund
 	}
 }
 
+func TestBuildFundDailyLocalDecisionDefersTrimWhenUpsideRoomIsConstructive(t *testing.T) {
+	expectedReturn := 16.0
+	contextData := FundDailyAIContext{
+		Constraints: FundDailyAIConstraints{
+			MaxDailyBuyAmount: 500,
+			CashRoom:          4000,
+		},
+		BudgetInput: FundDailyAIBudgetInput{
+			ProgramBudget: 300,
+		},
+		Portfolio: []FundDailyAIFund{
+			{
+				Code:                 "400001",
+				Name:                 "AI constructive holding C",
+				FundType:             "equity",
+				CurrentAmount:        500,
+				HoldingShares:        250,
+				CurrentWeight:        10,
+				ProfitRatio:          10,
+				ProfitAmount:         50,
+				Score:                90,
+				StrategyScore:        90,
+				ExpectedAnnualReturn: &expectedReturn,
+				Drawdown:             14,
+				Stddev:               14,
+				Sharp:                1.1,
+				RecentReturns:        FundDailyAIReturns{Month1: 13, Month3: 28, Month6: 38},
+				RankRatios:           FundDailyAIRankRatios{Month1: 20, Month3: 22, Month6: 24, ThisYear: 21, Year1: 23},
+				TopStocks:            []FundDailyTopHolding{{Name: "SharedGrowth", HoldRatio: 6}},
+			},
+		},
+	}
+
+	decision := BuildFundDailyLocalDecision(contextData)
+
+	assertDailyDecisionAction(t, decision, "400001", "hold", 0)
+	item := findDailyDecisionAction(t, decision, "400001")
+	if item.Action == "trim" || item.Amount > 0 {
+		t.Fatalf("expected constructive upside to remain hold, got %+v", item)
+	}
+}
+
 func TestBuildFundDailyLocalDecisionCanBuyAndTrimProfitableHolding(t *testing.T) {
 	contextData := FundDailyAIContext{
 		Constraints: FundDailyAIConstraints{
@@ -440,15 +482,15 @@ func TestBuildFundDailyLocalDecisionCanBuyAndTrimProfitableHolding(t *testing.T)
 		t.Fatalf("expected only buy amount to count toward daily buy budget, got %.2f", decision.DailyBuyBudget)
 	}
 	assertDailyDecisionAction(t, decision, "100001", "buy", 60)
-	assertDailyDecisionAction(t, decision, "300001", "trim", 100)
+	assertDailyDecisionAction(t, decision, "300001", "trim", 80)
 	trim := findDailyDecisionAction(t, decision, "300001")
-	if trim.ShareAmount != 50 {
-		t.Fatalf("expected trim share amount 50.00, got %.2f; action=%+v", trim.ShareAmount, trim)
+	if trim.ShareAmount != 40 {
+		t.Fatalf("expected trim share amount 40.00, got %.2f; action=%+v", trim.ShareAmount, trim)
 	}
-	if trim.AmountText() != "50.00份" {
+	if trim.AmountText() != "40.00份" {
 		t.Fatalf("expected trim amount text in shares, got %q", trim.AmountText())
 	}
-	if !strings.Contains(trim.RiskNote, "100.00 元") || !strings.Contains(trim.RiskNote, "50.00 份") {
+	if !strings.Contains(trim.RiskNote, "80.00 元") || !strings.Contains(trim.RiskNote, "40.00 份") {
 		t.Fatalf("expected trim risk note to retain amount and share basis, got %q", trim.RiskNote)
 	}
 	if len(decision.RiskNotes) == 0 {

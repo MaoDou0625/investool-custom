@@ -13,6 +13,7 @@ const (
 
 type fundDailyLocalProfitTakingOption struct {
 	fund        FundDailyAIFund
+	upside      fundDailyUpsideAssessment
 	score       float64
 	amount      float64
 	isExplicit  bool
@@ -60,25 +61,35 @@ func fundDailyLocalProfitTakingOptionForFund(fund FundDailyAIFund, signals fundD
 	}
 
 	explicitSell := fund.SuggestedSellAmount >= fundDailyLocalMinProfitTakingAmount
+	explicitFullSell := explicitSell && (fund.ProgramActionLevel == "sell" || fund.ProgramAction == "sell")
 	runup := fund.RecentReturns.Month1 >= 12 || fund.RecentReturns.Month3 >= 25 || fund.RecentReturns.Month6 >= 45
 	profit := fund.ProfitRatio >= 15 || fund.ProfitAmount >= fundDailyLocalMinProfitTakingAmount
 	riskControl := fund.Stddev >= 25 || fund.Drawdown >= 25 || (signals.TechConcentrated && isFundDailyTechExposure(fund)) || hasFundDailyLocalPortfolioTopOverlap(fund, signals)
-	if !explicitSell && !(runup && profit && riskControl) {
+
+	upside := assessFundDailyUpsideRoom(fund, signals)
+	automaticTrim := profit && riskControl && (runup || upside.allowAutomaticTrim)
+	if !explicitSell && !automaticTrim {
+		return fundDailyLocalProfitTakingOption{}, false
+	}
+	if !explicitSell && !upside.allowAutomaticTrim {
+		return fundDailyLocalProfitTakingOption{}, false
+	}
+	if explicitSell && !explicitFullSell && !upside.allowAutomaticTrim {
 		return fundDailyLocalProfitTakingOption{}, false
 	}
 
-	ratio := 0.15
-	if explicitSell || fund.ProfitRatio >= 25 || fund.Stddev >= 30 || fund.Drawdown >= 30 {
+	ratio := upside.trimRatio
+	if explicitSell {
 		ratio = 0.20
 	}
 	action := "trim"
 	amount := fund.CurrentAmount * ratio
 	if explicitSell {
-		if fund.ProgramActionLevel == "sell" || fund.ProgramAction == "sell" {
+		if explicitFullSell {
 			action = "sell"
 			amount = minPositive(fund.SuggestedSellAmount, fund.CurrentAmount)
 		} else {
-			amount = minPositive(fund.SuggestedSellAmount, fund.CurrentAmount*0.30)
+			amount = minPositive(fund.SuggestedSellAmount, fund.CurrentAmount*upside.trimRatio, fund.CurrentAmount*0.30)
 		}
 	}
 	if action == "sell" {
@@ -107,6 +118,7 @@ func fundDailyLocalProfitTakingOptionForFund(fund FundDailyAIFund, signals fundD
 
 	return fundDailyLocalProfitTakingOption{
 		fund:        fund,
+		upside:      upside,
 		score:       score,
 		amount:      amount,
 		isExplicit:  explicitSell,
@@ -131,6 +143,9 @@ func fundDailyLocalProfitTakingActionFromOption(option fundDailyLocalProfitTakin
 	} else {
 		riskNote += fmt.Sprintf(" 减仓参考金额 %.2f 元；份额需在交易前按账户最新净值手动折算。", option.amount)
 	}
+	if option.upside.riskNote != "" {
+		riskNote += " " + option.upside.riskNote
+	}
 	return FundDailyAIOutputAction{
 		Code:        fund.Code,
 		Name:        fund.Name,
@@ -146,7 +161,13 @@ func fundDailyLocalProfitTakingActionFromOption(option fundDailyLocalProfitTakin
 
 func fundDailyLocalProfitTakingReason(option fundDailyLocalProfitTakingOption) string {
 	if option.isExplicit {
+		if option.upside.reason != "" {
+			return "原始仓位规则已给出减仓信号；" + option.upside.reason
+		}
 		return "原始仓位规则已给出减仓信号，本地结构化建议保留小比例卖出，先释放风险而不是等满仓后再处理。"
+	}
+	if option.upside.reason != "" {
+		return option.upside.reason
 	}
 	if option.riskControl {
 		return "已有浮盈且短期涨幅较高，同时组合在同方向暴露或波动偏高，建议小比例止盈，避免利润全部暴露在同一轮波动里。"
