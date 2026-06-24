@@ -482,15 +482,15 @@ func TestBuildFundDailyLocalDecisionCanBuyAndTrimProfitableHolding(t *testing.T)
 		t.Fatalf("expected only buy amount to count toward daily buy budget, got %.2f", decision.DailyBuyBudget)
 	}
 	assertDailyDecisionAction(t, decision, "100001", "buy", 60)
-	assertDailyDecisionAction(t, decision, "300001", "trim", 80)
+	assertDailyDecisionAction(t, decision, "300001", "trim", 70)
 	trim := findDailyDecisionAction(t, decision, "300001")
-	if trim.ShareAmount != 40 {
-		t.Fatalf("expected trim share amount 40.00, got %.2f; action=%+v", trim.ShareAmount, trim)
+	if trim.ShareAmount != 35 {
+		t.Fatalf("expected trim share amount 35.00, got %.2f; action=%+v", trim.ShareAmount, trim)
 	}
-	if trim.AmountText() != "40.00份" {
+	if trim.AmountText() != "35.00份" {
 		t.Fatalf("expected trim amount text in shares, got %q", trim.AmountText())
 	}
-	if !strings.Contains(trim.RiskNote, "80.00 元") || !strings.Contains(trim.RiskNote, "40.00 份") {
+	if !strings.Contains(trim.RiskNote, "70.00 元") || !strings.Contains(trim.RiskNote, "35.00 份") {
 		t.Fatalf("expected trim risk note to retain amount and share basis, got %q", trim.RiskNote)
 	}
 	if len(decision.RiskNotes) == 0 {

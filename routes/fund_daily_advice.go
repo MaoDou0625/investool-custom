@@ -11,6 +11,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+const defaultFundDailyProfitTakingStateFilename = "./fund_daily_profit_taking_state.json"
+
 type fundDailyAdviceViewData struct {
 	Env         string
 	HostURL     string
@@ -34,7 +36,7 @@ type fundDailyAdviceBundle struct {
 }
 
 func FundDailyAdvicePage(c *gin.Context) {
-	bundle := buildFundDailyAdviceBundle(c)
+	bundle := buildFundDailyAdviceBundle(c, true)
 	data := fundDailyAdviceViewData{
 		Env:         viper.GetString("env"),
 		HostURL:     viper.GetString("server.host_url"),
@@ -51,11 +53,11 @@ func FundDailyAdvicePage(c *gin.Context) {
 }
 
 func FundDailyAdviceContextJSON(c *gin.Context) {
-	bundle := buildFundDailyAdviceBundle(c)
+	bundle := buildFundDailyAdviceBundle(c, false)
 	c.JSON(http.StatusOK, bundle.Report.AIContext)
 }
 
-func buildFundDailyAdviceBundle(c *gin.Context) fundDailyAdviceBundle {
+func buildFundDailyAdviceBundle(c *gin.Context, persistProfitTakingState bool) fundDailyAdviceBundle {
 	portfolioContext := loadFundPortfolioAnalysisContextWithOptions(c, "", fundPortfolioAnalysisLoadOptions{
 		UseLocalFundCache: true,
 	})
@@ -80,7 +82,13 @@ func buildFundDailyAdviceBundle(c *gin.Context) fundDailyAdviceBundle {
 	report.Warnings = append(report.Warnings, subscriptionWarnings...)
 	report.Warnings = append(report.Warnings, selection.Warnings...)
 	report.AIContext = core.BuildFundDailyAIContext(report)
-	report.AIDecision = core.BuildFundDailyLocalDecision(report.AIContext)
+	profitTakingState, profitTakingWarnings := loadFundDailyProfitTakingState()
+	report.Warnings = append(report.Warnings, profitTakingWarnings...)
+	decision, updatedProfitTakingState := core.BuildFundDailyLocalDecisionWithProfitTakingState(report.AIContext, profitTakingState)
+	report.AIDecision = decision
+	if persistProfitTakingState {
+		report.Warnings = append(report.Warnings, saveFundDailyProfitTakingState(updatedProfitTakingState)...)
+	}
 
 	return fundDailyAdviceBundle{
 		Report:      report,
@@ -90,6 +98,29 @@ func buildFundDailyAdviceBundle(c *gin.Context) fundDailyAdviceBundle {
 		SourceName:  selection.SourceName,
 		PageError:   portfolioContext.PageError,
 	}
+}
+
+func loadFundDailyProfitTakingState() (core.FundDailyProfitTakingState, []string) {
+	state, err := newFundDailyProfitTakingStateStore().Load()
+	if err != nil {
+		return state, []string{fmt.Sprintf("止盈状态读取失败，本轮止盈累计上限将按首次触发处理：%v", err)}
+	}
+	return state, nil
+}
+
+func saveFundDailyProfitTakingState(state core.FundDailyProfitTakingState) []string {
+	if err := newFundDailyProfitTakingStateStore().Save(state); err != nil {
+		return []string{fmt.Sprintf("止盈状态保存失败，后续可能重复给出同一轮止盈建议：%v", err)}
+	}
+	return nil
+}
+
+func newFundDailyProfitTakingStateStore() *core.FundDailyProfitTakingStateStore {
+	filename := viper.GetString("fund_advice.profit_taking_state_filename")
+	if filename == "" {
+		filename = defaultFundDailyProfitTakingStateFilename
+	}
+	return core.NewFundDailyProfitTakingStateStore(filename)
 }
 
 func loadFundDailyAdviceNAVCache() (models.FundNAVHistoryCache, []string) {

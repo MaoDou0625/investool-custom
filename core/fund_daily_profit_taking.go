@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"sort"
+	"time"
 )
 
 const (
@@ -24,6 +25,18 @@ type fundDailyLocalProfitTakingOption struct {
 }
 
 func buildFundDailyLocalProfitTakingActions(portfolio []FundDailyAIFund, signals fundDailyLocalSignals, buyActions []FundDailyAIOutputAction, allowAutomatic bool) []FundDailyAIOutputAction {
+	actions, _ := buildFundDailyLocalProfitTakingActionsWithState(portfolio, signals, buyActions, allowAutomatic, emptyFundDailyProfitTakingState(), time.Now())
+	return actions
+}
+
+func buildFundDailyLocalProfitTakingActionsWithState(
+	portfolio []FundDailyAIFund,
+	signals fundDailyLocalSignals,
+	buyActions []FundDailyAIOutputAction,
+	allowAutomatic bool,
+	state FundDailyProfitTakingState,
+	generatedAt time.Time,
+) ([]FundDailyAIOutputAction, FundDailyProfitTakingState) {
 	bought := fundDailyLocalActionCodeSet(buyActions)
 	options := make([]fundDailyLocalProfitTakingOption, 0, len(portfolio))
 	for _, fund := range portfolio {
@@ -46,13 +59,24 @@ func buildFundDailyLocalProfitTakingActions(portfolio []FundDailyAIFund, signals
 	})
 
 	actions := make([]FundDailyAIOutputAction, 0, minInt(len(options), fundDailyLocalMaxProfitTakingActions))
+	nextState := state
 	for _, option := range options {
 		if len(actions) >= fundDailyLocalMaxProfitTakingActions {
 			break
 		}
-		actions = append(actions, fundDailyLocalProfitTakingActionFromOption(option))
+		adjusted, updatedState, ok, note := applyFundDailyProfitTakingState(option, nextState, generatedAt)
+		if !ok {
+			nextState = updatedState
+			continue
+		}
+		nextState = updatedState
+		action := fundDailyLocalProfitTakingActionFromOption(adjusted)
+		if note != "" {
+			action.RiskNote += " " + note
+		}
+		actions = append(actions, action)
 	}
-	return actions
+	return actions, nextState
 }
 
 func fundDailyLocalProfitTakingOptionForFund(fund FundDailyAIFund, signals fundDailyLocalSignals) (fundDailyLocalProfitTakingOption, bool) {
@@ -164,7 +188,7 @@ func fundDailyLocalProfitTakingReason(option fundDailyLocalProfitTakingOption) s
 		if option.upside.reason != "" {
 			return "原始仓位规则已给出减仓信号；" + option.upside.reason
 		}
-		return "原始仓位规则已给出减仓信号，本地结构化建议保留小比例卖出，先释放风险而不是等满仓后再处理。"
+		return "原始仓位规则已给出减仓信号，本地结构化建议保留小比例卖出，先释放风险，避免等到满仓后再处理。"
 	}
 	if option.upside.reason != "" {
 		return option.upside.reason

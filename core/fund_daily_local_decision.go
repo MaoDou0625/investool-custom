@@ -27,6 +27,11 @@ type fundDailyLocalCandidateScore struct {
 }
 
 func BuildFundDailyLocalDecision(contextData FundDailyAIContext) FundDailyAIDecision {
+	decision, _ := BuildFundDailyLocalDecisionWithProfitTakingState(contextData, emptyFundDailyProfitTakingState())
+	return decision
+}
+
+func BuildFundDailyLocalDecisionWithProfitTakingState(contextData FundDailyAIContext, profitTakingState FundDailyProfitTakingState) (FundDailyAIDecision, FundDailyProfitTakingState) {
 	signals := summarizeFundDailyLocalSignals(contextData)
 	budget := chooseFundDailyLocalBudget(contextData, signals)
 	actions := []FundDailyAIOutputAction{}
@@ -76,7 +81,7 @@ func BuildFundDailyLocalDecision(contextData FundDailyAIContext) FundDailyAIDeci
 	candidateScores := scoreFundDailyLocalCandidates(contextData.Candidates, contextData.Portfolio, signals, contextData.MarketContext, contextData.NewsContext, contextData.IndustryExpectationContext)
 	buyActions, usedBudget := buildFundDailyLocalRebalanceBuyActions(contextData, candidateScores, budget, signals)
 	actions = mergeFundDailyLocalBuyActions(actions, buyActions)
-	trimActions := buildFundDailyLocalProfitTakingActions(contextData.Portfolio, signals, buyActions, !contextData.WorkdayGuard.BlocksBuy())
+	trimActions, nextProfitTakingState := buildFundDailyLocalProfitTakingActionsWithState(contextData.Portfolio, signals, buyActions, !contextData.WorkdayGuard.BlocksBuy(), profitTakingState, fundDailyProfitTakingGeneratedAt(contextData.GeneratedAt))
 	actions = mergeFundDailyLocalTrimActions(actions, trimActions)
 	watchAction, ok := buildFundDailyLocalWatchAction(contextData.Candidates)
 	if ok {
@@ -109,7 +114,7 @@ func BuildFundDailyLocalDecision(contextData FundDailyAIContext) FundDailyAIDeci
 		Warnings:       []string{},
 	}
 	decision = validateFundDailyLocalDecision(decision, contextData)
-	return decision
+	return decision, nextProfitTakingState
 }
 
 func summarizeFundDailyLocalSignals(contextData FundDailyAIContext) fundDailyLocalSignals {
