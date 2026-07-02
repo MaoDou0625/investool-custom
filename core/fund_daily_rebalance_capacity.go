@@ -1,7 +1,7 @@
 package core
 
 const (
-	fundDailyLocalMinRebalanceBuyAmount     = 40
+	fundDailyLocalMinRebalanceBuyAmount     = 20
 	fundDailyLocalDefaultRebalanceBuyAmount = 60
 	fundDailyLocalMediumRebalanceBuyAmount  = 80
 	fundDailyLocalLargeRebalanceBuyAmount   = 100
