@@ -7,7 +7,6 @@ import (
 )
 
 const (
-	fundDailyLocalMaxRebalanceBuys   = 2
 	fundDailyLocalNewFundScoreMargin = 8
 )
 
@@ -43,18 +42,13 @@ func buildFundDailyLocalRebalanceBuyActions(contextData FundDailyAIContext, cand
 	remaining := budget
 	selectedRoles := map[string]bool{}
 	for _, option := range options {
-		if remaining < 10 || len(actions) >= fundDailyLocalMaxRebalanceBuys {
+		if !fundDailyLocalHasMeaningfulBuyRoom(remaining) {
 			break
 		}
 		if selectedRoles[option.role] && len(actions) > 0 {
 			continue
 		}
-		amount := 60.0
-		if budget >= 180 {
-			amount = 80
-		}
-		amount = minPositive(amount, option.fund.SuggestedBuyCeiling, remaining)
-		amount = roundDailyAmount(amount)
+		amount := fundDailyLocalRebalanceBuyAmount(option.fund, budget, remaining)
 		if amount <= 0 {
 			continue
 		}

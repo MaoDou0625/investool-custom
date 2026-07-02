@@ -312,47 +312,6 @@ func fundDailyShareClassGroup(name string, code string) string {
 	return code
 }
 
-func buildFundDailyLocalBuyActions(scores []fundDailyLocalCandidateScore, budget float64) ([]FundDailyAIOutputAction, float64) {
-	if budget <= 0 {
-		return nil, 0
-	}
-	actions := []FundDailyAIOutputAction{}
-	remaining := budget
-	selectedThemes := map[string]bool{}
-	for _, item := range scores {
-		if remaining < 10 || len(actions) >= 2 {
-			break
-		}
-		fund := item.fund
-		themeKey := fundDailyLocalThemeKey(fund)
-		if selectedThemes[themeKey] && len(actions) > 0 {
-			continue
-		}
-		amount := 60.0
-		if budget >= 180 {
-			amount = 80
-		}
-		amount = minPositive(amount, fund.SuggestedBuyCeiling, remaining)
-		amount = roundDailyAmount(amount)
-		if amount <= 0 {
-			continue
-		}
-		actions = append(actions, FundDailyAIOutputAction{
-			Code:     fund.Code,
-			Name:     fund.Name,
-			FundType: fund.FundType,
-			Source:   fundDailyBudgetSourceCandidate,
-			Action:   "buy",
-			Amount:   amount,
-			Reason:   fundDailyLocalBuyReason(fund),
-			RiskNote: fmt.Sprintf("回撤 %.1f%%，波动 %.1f%%，近 1/3/6 月收益 %.1f%% / %.1f%% / %.1f%%。", fund.Drawdown, fund.Stddev, fund.RecentReturns.Month1, fund.RecentReturns.Month3, fund.RecentReturns.Month6),
-		})
-		selectedThemes[themeKey] = true
-		remaining -= amount
-	}
-	return actions, budget - remaining
-}
-
 func buildFundDailyLocalWatchAction(candidates []FundDailyAIFund) (FundDailyAIOutputAction, bool) {
 	var best *FundDailyAIFund
 	for idx := range candidates {

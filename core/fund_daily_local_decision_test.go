@@ -387,6 +387,98 @@ func TestBuildFundDailyLocalDecisionPrefersExistingDiversifierOverSimilarNewFund
 	}
 }
 
+func TestBuildFundDailyLocalDecisionCanSelectMoreThanTwoDistinctBuyRoles(t *testing.T) {
+	contextData := FundDailyAIContext{
+		Constraints: FundDailyAIConstraints{
+			MaxDailyBuyAmount: 1000,
+			CashRoom:          4000,
+		},
+		BudgetInput: FundDailyAIBudgetInput{
+			ProgramBudget: 1000,
+		},
+		Candidates: []FundDailyAIFund{
+			{
+				Code:                "100001",
+				Name:                "Quant Alpha C",
+				FundType:            "equity",
+				SuggestedBuyCeiling: 300,
+				CanSubscribe:        true,
+				Score:               95,
+				StrategyScore:       100,
+				StrategyTheme:       "QUANT",
+				Drawdown:            10,
+				Stddev:              10,
+				NetAssetsScaleYi:    5,
+			},
+			{
+				Code:                "100002",
+				Name:                "Bond Balance C",
+				FundType:            "mixed",
+				SuggestedBuyCeiling: 300,
+				CanSubscribe:        true,
+				Score:               95,
+				StrategyScore:       100,
+				StrategyTheme:       "BOND",
+				Drawdown:            10,
+				Stddev:              10,
+				NetAssetsScaleYi:    5,
+			},
+			{
+				Code:                "100003",
+				Name:                "Global Nasdaq QDII C",
+				FundType:            "QDII",
+				SuggestedBuyCeiling: 300,
+				CanSubscribe:        true,
+				Score:               95,
+				StrategyScore:       100,
+				StrategyTheme:       "GLOBAL",
+				Drawdown:            10,
+				Stddev:              10,
+				NetAssetsScaleYi:    5,
+			},
+			{
+				Code:                "100004",
+				Name:                "Gold ETF C",
+				FundType:            "commodity",
+				SuggestedBuyCeiling: 300,
+				CanSubscribe:        true,
+				Score:               95,
+				StrategyScore:       100,
+				StrategyTheme:       "GOLD",
+				Drawdown:            10,
+				Stddev:              10,
+				NetAssetsScaleYi:    5,
+			},
+			{
+				Code:                "100005",
+				Name:                "Another Quant C",
+				FundType:            "equity",
+				SuggestedBuyCeiling: 300,
+				CanSubscribe:        true,
+				Score:               94,
+				StrategyScore:       99,
+				StrategyTheme:       "QUANT",
+				Drawdown:            10,
+				Stddev:              10,
+				NetAssetsScaleYi:    5,
+			},
+		},
+	}
+
+	decision := BuildFundDailyLocalDecision(contextData)
+
+	buys := countDailyDecisionBuys(decision)
+	if buys != 4 {
+		t.Fatalf("expected four distinct buy roles, got %d; actions=%+v", buys, decision.Actions)
+	}
+	if decision.DailyBuyBudget != 320 {
+		t.Fatalf("expected budget to be allocated by meaningful buy size, got %.2f", decision.DailyBuyBudget)
+	}
+	if hasDailyDecisionBuy(decision, "100005") {
+		t.Fatalf("expected duplicate quant role to be skipped; actions=%+v", decision.Actions)
+	}
+}
+
 func TestBuildFundDailyLocalDecisionDefersTrimWhenUpsideRoomIsConstructive(t *testing.T) {
 	expectedReturn := 16.0
 	contextData := FundDailyAIContext{
@@ -549,4 +641,14 @@ func hasDailyDecisionBuy(decision FundDailyAIDecision, code string) bool {
 		}
 	}
 	return false
+}
+
+func countDailyDecisionBuys(decision FundDailyAIDecision) int {
+	count := 0
+	for _, item := range decision.Actions {
+		if item.Action == "buy" && item.Amount > 0 {
+			count++
+		}
+	}
+	return count
 }
