@@ -38,7 +38,7 @@ env = "localhost"
 [fund_advice]
     target_annual_return = 5.0
     max_total_amount = 2300.0
-    cash_buffer_weight = 10.0
+    cash_buffer_weight = 0.0
     max_single_fund_weight = 35.0
     tactical_weight = 20.0
     max_daily_buy_weight = 10.0
